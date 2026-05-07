@@ -3,6 +3,7 @@ package browserauth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -316,4 +317,261 @@ func sessionCookieValueList(session volumeleaders.Session) []string {
 		values = append(values, cookie.Value)
 	}
 	return values
+}
+
+// fixtureSecrets are well-known credential values injected by redaction tests.
+// If any appear in an error message, the error path leaks sensitive material.
+var fixtureSecrets = []string{
+	"secret-session-id",
+	"secret-forms-auth",
+	"secret-xsrf-token",
+	"/tmp/secret-profile/Default",
+	"credential-bearing-body",
+}
+
+// assertNoSecretLeakage checks that err.Error() does not contain any of the
+// provided fixture secrets.
+func assertNoSecretLeakage(t *testing.T, err error, secrets []string) {
+	t.Helper()
+	require.Error(t, err)
+	errMsg := err.Error()
+	for _, secret := range secrets {
+		assert.NotContains(t, errMsg, secret,
+			"error message must not leak sensitive value")
+	}
+}
+
+// secretKookyCookies returns kooky cookies carrying fixture secret values and
+// browser metadata that must never appear in error messages.
+// testBrowserInfo{browser: "secret-profile", profile: "Default"} produces
+// FilePath() = "/tmp/secret-profile/Default", matching a fixture secret.
+func secretKookyCookies() kooky.Cookies {
+	return kooky.Cookies{
+		{
+			Cookie:  http.Cookie{Name: volumeleaders.SessionCookieName, Value: "secret-session-id"},
+			Browser: testBrowserInfo{browser: "secret-profile", profile: "Default"},
+		},
+		{
+			Cookie:  http.Cookie{Name: volumeleaders.FormsAuthCookieName, Value: "secret-forms-auth"},
+			Browser: testBrowserInfo{browser: "secret-profile", profile: "Default"},
+		},
+		{
+			Cookie:  http.Cookie{Name: volumeleaders.RequestVerificationCookieName, Value: "secret-xsrf-token"},
+			Browser: testBrowserInfo{browser: "secret-profile", profile: "Default"},
+		},
+	}
+}
+
+// --- Secret redaction tests ---
+//
+// Each test injects fixture secrets into an error path and asserts that
+// err.Error() does not expose them. FindSession does not exist yet; these
+// tests define the redaction contract for future implementation (TDD).
+
+func TestFindSessionRedactsBrowserReadErrorSecrets(t *testing.T) {
+	// kooky returns an error whose message embeds a browser profile path.
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return nil, fmt.Errorf("sqlite: open /tmp/secret-profile/Default/Cookies: permission denied")
+	})
+
+	_, err := FindSession(context.Background())
+	assertNoSecretLeakage(t, err, fixtureSecrets)
+	assert.ErrorIs(t, err, volumeleaders.ErrBrowserCookiesUnavailable,
+		"browser read error must remain matchable")
+}
+
+func TestFindSessionRedactsMissingCookieSecrets(t *testing.T) {
+	// Only session cookie present with a secret value; .ASPXAUTH missing.
+	// The secret cookie value must not appear in the error.
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return kooky.Cookies{
+			{
+				Cookie:  http.Cookie{Name: volumeleaders.SessionCookieName, Value: "secret-session-id"},
+				Browser: testBrowserInfo{browser: "secret-profile", profile: "Default"},
+			},
+		}, nil
+	})
+
+	_, err := FindSession(context.Background())
+	assertNoSecretLeakage(t, err, fixtureSecrets)
+	assert.ErrorIs(t, err, volumeleaders.ErrBrowserCookiesUnavailable,
+		"missing cookie error must remain matchable")
+}
+
+func TestFindSessionRedactsValidationErrorSecrets(t *testing.T) {
+	// Browser filter selects a browser that has only a partial set of
+	// VolumeLeaders cookies. The cookie values present must not leak.
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return kooky.Cookies{
+			browserCookie("chrome", "Default", volumeleaders.SessionCookieName, "secret-session-id"),
+			// chrome is missing .ASPXAUTH; firefox has it but shouldn't be selected.
+			browserCookie("firefox", "default", volumeleaders.FormsAuthCookieName, "secret-forms-auth"),
+		}, nil
+	})
+
+	_, err := FindSession(context.Background(), WithBrowser("chrome"))
+	assertNoSecretLeakage(t, err, fixtureSecrets)
+	assert.ErrorIs(t, err, volumeleaders.ErrBrowserCookiesUnavailable,
+		"validation error must remain matchable")
+}
+
+func TestFindSessionRedactsSessionExpiredSecrets(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return secretKookyCookies(), nil
+	})
+
+	// Server returns a page that looks like a login page, triggering session
+	// expired detection. The response body contains fixture secrets.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<html><body class="login">credential-bearing-body</body></html>`))
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := FindSession(context.Background(), WithClientOptions(
+		volumeleaders.WithBaseURL(server.URL),
+		volumeleaders.WithHTTPClient(server.Client()),
+	))
+	assertNoSecretLeakage(t, err, fixtureSecrets)
+	assert.ErrorIs(t, err, volumeleaders.ErrSessionExpired,
+		"session expired error must remain matchable")
+}
+
+func TestFindSessionRedactsMissingXSRFTokenSecrets(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return secretKookyCookies(), nil
+	})
+
+	// Server returns valid HTML without a __RequestVerificationToken input.
+	// The body embeds fixture secrets that must not leak.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<html><body>secret-xsrf-token credential-bearing-body</body></html>`))
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := FindSession(context.Background(), WithClientOptions(
+		volumeleaders.WithBaseURL(server.URL),
+		volumeleaders.WithHTTPClient(server.Client()),
+	))
+	assertNoSecretLeakage(t, err, fixtureSecrets)
+	assert.ErrorIs(t, err, volumeleaders.ErrXSRFTokenNotFound,
+		"missing XSRF token error must remain matchable")
+}
+
+func TestFindSessionRedactsStatusErrorSecrets(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return secretKookyCookies(), nil
+	})
+
+	// Server returns 500 with a body that contains fixture secrets.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`credential-bearing-body`))
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := FindSession(context.Background(), WithClientOptions(
+		volumeleaders.WithBaseURL(server.URL),
+		volumeleaders.WithHTTPClient(server.Client()),
+	))
+	assertNoSecretLeakage(t, err, fixtureSecrets)
+
+	var statusErr *volumeleaders.StatusError
+	assert.ErrorAs(t, err, &statusErr,
+		"status error must remain matchable with errors.As")
+}
+
+// --- Error matchability after redaction ---
+
+// TestFindSessionErrorMatchAfterRedaction verifies that errors from every
+// FindSession failure path remain matchable with errors.Is or errors.As even
+// after sensitive values are redacted.
+func TestFindSessionErrorMatchAfterRedaction(t *testing.T) {
+	t.Run("browser read error is ErrBrowserCookiesUnavailable", func(t *testing.T) {
+		stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+			return nil, fmt.Errorf("sqlite: open /tmp/secret-profile/Default: denied")
+		})
+
+		_, err := FindSession(context.Background())
+		require.Error(t, err)
+		assert.ErrorIs(t, err, volumeleaders.ErrBrowserCookiesUnavailable,
+			"error must be matchable with errors.Is after redaction")
+	})
+
+	t.Run("missing cookies is ErrBrowserCookiesUnavailable", func(t *testing.T) {
+		stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+			return kooky.Cookies{
+				{Cookie: http.Cookie{Name: volumeleaders.SessionCookieName, Value: "secret-session-id"}},
+			}, nil
+		})
+
+		_, err := FindSession(context.Background())
+		require.Error(t, err)
+		assert.ErrorIs(t, err, volumeleaders.ErrBrowserCookiesUnavailable,
+			"error must be matchable with errors.Is after redaction")
+	})
+
+	t.Run("session expired is ErrSessionExpired", func(t *testing.T) {
+		stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+			return secretKookyCookies(), nil
+		})
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(`<html><body class="login">credential-bearing-body</body></html>`))
+		}))
+		t.Cleanup(server.Close)
+
+		_, err := FindSession(context.Background(), WithClientOptions(
+			volumeleaders.WithBaseURL(server.URL),
+			volumeleaders.WithHTTPClient(server.Client()),
+		))
+		require.Error(t, err)
+		assert.ErrorIs(t, err, volumeleaders.ErrSessionExpired,
+			"error must be matchable with errors.Is after redaction")
+	})
+
+	t.Run("missing XSRF token is ErrXSRFTokenNotFound", func(t *testing.T) {
+		stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+			return secretKookyCookies(), nil
+		})
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(`<html><body>no token here</body></html>`))
+		}))
+		t.Cleanup(server.Close)
+
+		_, err := FindSession(context.Background(), WithClientOptions(
+			volumeleaders.WithBaseURL(server.URL),
+			volumeleaders.WithHTTPClient(server.Client()),
+		))
+		require.Error(t, err)
+		assert.ErrorIs(t, err, volumeleaders.ErrXSRFTokenNotFound,
+			"error must be matchable with errors.Is after redaction")
+	})
+
+	t.Run("status error is errors.As StatusError", func(t *testing.T) {
+		stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+			return secretKookyCookies(), nil
+		})
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`credential-bearing-body`))
+		}))
+		t.Cleanup(server.Close)
+
+		_, err := FindSession(context.Background(), WithClientOptions(
+			volumeleaders.WithBaseURL(server.URL),
+			volumeleaders.WithHTTPClient(server.Client()),
+		))
+		require.Error(t, err)
+
+		var statusErr *volumeleaders.StatusError
+		assert.ErrorAs(t, err, &statusErr,
+			"error must be matchable with errors.As after redaction")
+	})
 }
