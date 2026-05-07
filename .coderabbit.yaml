@@ -45,11 +45,72 @@ reviews:
     - "!**/vendor/**"
     - "!**/dist/**"
     - "!**/coverage.out"
-    - "!market_data.har"
-    - "!trader_api.har"
+    - "!*.har"
     - "!.sisyphus/**"
 
   path_instructions:
+    - path: "volumeleaders/**/*.go"
+      instructions: |
+        Library API review:
+        - Treat this as a browser-backed VolumeLeaders API client, not a user-facing porcelain layer
+        - Keep VolumeLeaders form keys, DataTables field names, request headers, and endpoint paths inside Go code
+        - Public request methods should preserve context propagation and return values plus errors without process-level side effects
+        - Request paths, form/query names, JSON tags, and response models must match captured VolumeLeaders browser traffic
+        - Preserve typed errors and predicates such as IsAuthError, IsStatusCode, IsInvalidQuery, IsBodyLimit, and IsUnexpectedContent
+        - Avoid logging or exposing cookies, ASP.NET session IDs, XSRF tokens, browser profile paths, or captured request payloads
+        - Exported identifiers need useful Go comments
+        - Don't nitpick style because gofmt and golangci-lint handle formatting and lint
+
+    - path: "volumeleaders/trades.go"
+      instructions: |
+        Trades API review:
+        - Keep TradeQuery as the high-level surface for common filters so callers do not build raw DataTables values
+        - Validate query values before sending requests, especially negative limits, invalid sort columns, and malformed dates
+        - Capped pagination helpers must not allow unbounded LLM-triggered requests
+        - Preserve caller-provided filter values without mutating input url.Values or slices
+
+    - path: "volumeleaders/datatables*.go"
+      instructions: |
+        DataTables review:
+        - Encoded draw, paging, ordering, search, and columns fields must match DataTables form naming exactly
+        - Column order matters because captured endpoints bind columns by numeric index
+        - Keep raw DataTables mechanics inside this package so porcelain can use typed APIs
+
+    - path: "volumeleaders/auth.go"
+      instructions: |
+        Authentication review:
+        - XSRF token fetching should detect login pages, redirects, missing tokens, and unexpected content clearly
+        - Never expose browser cookies, ASP.NET session IDs, or XSRF tokens in errors, tests, docs, or logs
+        - Authentication failures should remain classifiable through IsAuthError or related typed errors
+
+    - path: "volumeleaders/session.go"
+      instructions: |
+        Session review:
+        - NewSession and SessionFromCookies should keep explicit session use suitable for services and containers
+        - ValidateSession and missing-field helpers should produce actionable field names without leaking secret values
+        - Preserve defensive copying of cookies and headers so callers cannot mutate client state accidentally
+
+    - path: "volumeleaders/browserauth/**/*.go"
+      instructions: |
+        Browser auth review:
+        - Keep browser-store access isolated to the browserauth subpackage
+        - The root volumeleaders package must not import kooky, SQLite, desktop keyring, or browser-store dependencies
+        - Browser-backed auth is for desktop automation only; services and containers should prefer explicit sessions
+        - Do not expose local browser profile paths, cookie values, or tokens in errors or logs
+
+    - path: "volumeleaders/errors.go"
+      instructions: |
+        Error handling review:
+        - Preserve typed errors and predicate helpers for caller matching
+        - Include status code, method, path, content type, and safe body previews where useful
+        - Do not leak cookies, session IDs, XSRF tokens, or full captured request payloads in error strings
+
+    - path: "volumeleaders/options.go"
+      instructions: |
+        Client options review:
+        - Keep client configuration explicit through options such as WithHTTPClient, WithBaseURL, WithResponseBodyLimit, WithUserAgent, WithDefaultHeader, and WithDefaultHeaders
+        - Do not add hidden environment variable reads, config-file reads, or browser-store access to the root package
+        - Invalid base URLs and body limits should fail clearly or preserve documented defaults
 
     - path: "**/*_test.go"
       instructions: |
@@ -58,7 +119,8 @@ reviews:
         - Mock HTTP with httptest.NewServer and inline request validation
         - Test helpers should be marked with t.Helper()
         - Prefer table-driven subtests with t.Run() when cases share setup
-        - Don't nitpick coverage percentages
+        - Verify request methods, paths, form/query fields, headers, cookies, redirects, and decoded response fields
+        - Keep coverage at or above the Makefile floor, but don't nitpick harmless percentage changes above that floor
 
     - path: ".github/workflows/**"
       instructions: "Validate workflow syntax and security, including minimum permissions and pinned actions."

@@ -1,6 +1,16 @@
 # volumeleaders-go
 
+[![CI](https://github.com/major/volumeleaders-go/actions/workflows/ci.yml/badge.svg)](https://github.com/major/volumeleaders-go/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/major/volumeleaders-go/branch/main/graph/badge.svg)](https://codecov.io/gh/major/volumeleaders-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/major/volumeleaders-go)](https://goreportcard.com/report/github.com/major/volumeleaders-go)
+[![Go Reference](https://pkg.go.dev/badge/github.com/major/volumeleaders-go/volumeleaders.svg)](https://pkg.go.dev/github.com/major/volumeleaders-go/volumeleaders)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/major/volumeleaders-go/badge)](https://scorecard.dev/viewer/?uri=github.com/major/volumeleaders-go)
+[![License](https://img.shields.io/github/license/major/volumeleaders-go)](LICENSE)
+
 `volumeleaders-go` provides a small Go client for the browser-backed VolumeLeaders endpoints used by authenticated sessions. The package is intended to be the API layer underneath higher-level porcelain, including LLM-facing tools that should not know VolumeLeaders form keys, headers, or response envelope details.
+
+> [!NOTE]
+> This project is unofficial and is not affiliated with, sponsored by, or endorsed by VolumeLeaders or volumeleaders.com in any way.
 
 ## Installation
 
