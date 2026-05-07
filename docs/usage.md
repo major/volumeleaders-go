@@ -86,6 +86,26 @@ session, err := browserauth.FindSession(ctx, browserauth.WithoutValidation())
 
 Authenticated DataTables endpoints require a valid XSRF token. Callers using `WithoutValidation` must populate `XSRFToken` before making those requests.
 
+### Error sentinels
+
+`FindSession` returns typed errors that callers can match with `errors.Is`:
+
+- `ErrBrowserUnavailable` - the named browser has no matching VolumeLeaders cookies.
+- `ErrProfileUnavailable` - the named profile has no matching VolumeLeaders cookies.
+- `ErrRequiredCookieMissing` - cookies were found but required fields are absent.
+- `*ValidationError` - the XSRF token fetch failed; unwrap with `errors.As` to get the underlying cause.
+
+```go
+var ve *browserauth.ValidationError
+if errors.As(err, &ve) {
+    // ve.Err holds the underlying fetch failure.
+    return fmt.Errorf("session validation failed: %w", ve.Err)
+}
+if errors.Is(err, browserauth.ErrBrowserUnavailable) {
+    return fmt.Errorf("no VolumeLeaders cookies in the requested browser: %w", err)
+}
+```
+
 ## Trades
 
 `ListTrades` wraps `/Trades/GetTrades` with a typed query so callers do not need to know DataTables field names or VolumeLeaders form keys.
