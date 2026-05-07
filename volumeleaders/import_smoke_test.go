@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExternalImports(t *testing.T) {
+func TestImportSmoke(t *testing.T) {
 	root := moduleRoot(t)
 	dir := t.TempDir()
 	goMod := "module volumeleaders_import_smoke\n\ngo 1.26.3\n\nrequire github.com/major/volumeleaders-go v0.0.0\n\nreplace github.com/major/volumeleaders-go => " + root + "\n"
