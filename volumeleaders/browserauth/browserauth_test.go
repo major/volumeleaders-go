@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/browserutils/kooky"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/major/volumeleaders-go/volumeleaders"
 )
@@ -134,6 +136,105 @@ func TestExtractCookiesReportsBrowserDiagnostics(t *testing.T) {
 	}
 }
 
+func TestFindSessionWithBrowserSelectsOnlyMatchingBrowser(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return kooky.Cookies{
+			browserCookie("firefox", "default", volumeleaders.SessionCookieName, "firefox-session"),
+			browserCookie("firefox", "default", volumeleaders.FormsAuthCookieName, "firefox-auth"),
+			browserCookie("firefox", "default", volumeleaders.RequestVerificationCookieName, "firefox-verification"),
+			browserCookie("chrome", "default", volumeleaders.SessionCookieName, "chrome-session"),
+			browserCookie("chrome", "default", volumeleaders.FormsAuthCookieName, "chrome-auth"),
+			browserCookie("chrome", "default", volumeleaders.RequestVerificationCookieName, "chrome-verification"),
+		}, nil
+	})
+
+	session, err := FindSession(context.Background(), WithBrowser("firefox"))
+	require.NoError(t, err, "FindSession(WithBrowser(%q)) returned unexpected error", "firefox")
+
+	assertSessionCookieValues(t, session, map[string]string{
+		volumeleaders.SessionCookieName:             "firefox-session",
+		volumeleaders.FormsAuthCookieName:           "firefox-auth",
+		volumeleaders.RequestVerificationCookieName: "firefox-verification",
+	})
+	assert.NotContains(t, sessionCookieValueList(session), "chrome-session", "FindSession(WithBrowser(%q)) must not use other browser cookies", "firefox")
+}
+
+func TestFindSessionWithProfileSelectsOnlyMatchingProfile(t *testing.T) {
+	tests := []struct {
+		name        string
+		profile     string
+		wantCookies map[string]string
+	}{
+		{
+			name:    "default profile",
+			profile: "default",
+			wantCookies: map[string]string{
+				volumeleaders.SessionCookieName:             "default-session",
+				volumeleaders.FormsAuthCookieName:           "default-auth",
+				volumeleaders.RequestVerificationCookieName: "default-verification",
+			},
+		},
+		{
+			name:    "work profile",
+			profile: "work",
+			wantCookies: map[string]string{
+				volumeleaders.SessionCookieName:             "work-session",
+				volumeleaders.FormsAuthCookieName:           "work-auth",
+				volumeleaders.RequestVerificationCookieName: "work-verification",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+				return kooky.Cookies{
+					browserCookie("firefox", "default", volumeleaders.SessionCookieName, "default-session"),
+					browserCookie("firefox", "default", volumeleaders.FormsAuthCookieName, "default-auth"),
+					browserCookie("firefox", "default", volumeleaders.RequestVerificationCookieName, "default-verification"),
+					browserCookie("firefox", "work", volumeleaders.SessionCookieName, "work-session"),
+					browserCookie("firefox", "work", volumeleaders.FormsAuthCookieName, "work-auth"),
+					browserCookie("firefox", "work", volumeleaders.RequestVerificationCookieName, "work-verification"),
+				}, nil
+			})
+
+			session, err := FindSession(context.Background(), WithProfile(tt.profile))
+			require.NoError(t, err, "FindSession(WithProfile(%q)) returned unexpected error", tt.profile)
+			assertSessionCookieValues(t, session, tt.wantCookies)
+		})
+	}
+}
+
+func TestFindSessionWithBrowserNoFallback(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return kooky.Cookies{
+			browserCookie("chrome", "default", "unrelated", "chrome-cookie"),
+			browserCookie("firefox", "default", volumeleaders.SessionCookieName, "firefox-session"),
+			browserCookie("firefox", "default", volumeleaders.FormsAuthCookieName, "firefox-auth"),
+			browserCookie("firefox", "default", volumeleaders.RequestVerificationCookieName, "firefox-verification"),
+		}, nil
+	})
+
+	session, err := FindSession(context.Background(), WithBrowser("chrome"))
+	require.Error(t, err, "FindSession(WithBrowser(%q)) must fail when selected browser lacks required cookies", "chrome")
+	assert.Empty(t, session.Cookies, "FindSession(WithBrowser(%q)) must not fall back to unselected browser cookies", "chrome")
+}
+
+func TestFindSessionWithProfileNoFallback(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return kooky.Cookies{
+			browserCookie("firefox", "default", "unrelated", "default-cookie"),
+			browserCookie("firefox", "work", volumeleaders.SessionCookieName, "work-session"),
+			browserCookie("firefox", "work", volumeleaders.FormsAuthCookieName, "work-auth"),
+			browserCookie("firefox", "work", volumeleaders.RequestVerificationCookieName, "work-verification"),
+		}, nil
+	})
+
+	session, err := FindSession(context.Background(), WithProfile("default"))
+	require.Error(t, err, "FindSession(WithProfile(%q)) must fail when selected profile lacks required cookies", "default")
+	assert.Empty(t, session.Cookies, "FindSession(WithProfile(%q)) must not fall back to unselected profile cookies", "default")
+}
+
 func TestNewBuildsClientFromBrowserCookiesAndFetchedXSRFToken(t *testing.T) {
 	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
 		return requiredKookyCookies(), nil
@@ -179,4 +280,40 @@ func requiredKookyCookies() kooky.Cookies {
 		{Cookie: http.Cookie{Name: volumeleaders.FormsAuthCookieName, Value: "forms-auth"}},
 		{Cookie: http.Cookie{Name: volumeleaders.RequestVerificationCookieName, Value: "verification"}},
 	}
+}
+
+func browserCookie(browser, profile, name, value string) *kooky.Cookie {
+	return &kooky.Cookie{
+		Cookie:  http.Cookie{Name: name, Value: value},
+		Browser: testBrowserInfo{browser: browser, profile: profile},
+	}
+}
+
+func assertSessionCookieValues(t *testing.T, session volumeleaders.Session, want map[string]string) {
+	t.Helper()
+
+	got := sessionCookieValues(session)
+	assert.Equal(t, want, got, "FindSession() selected cookies mismatch")
+}
+
+func sessionCookieValues(session volumeleaders.Session) map[string]string {
+	values := make(map[string]string, len(session.Cookies))
+	for _, cookie := range session.Cookies {
+		if cookie == nil {
+			continue
+		}
+		values[cookie.Name] = cookie.Value
+	}
+	return values
+}
+
+func sessionCookieValueList(session volumeleaders.Session) []string {
+	values := make([]string, 0, len(session.Cookies))
+	for _, cookie := range session.Cookies {
+		if cookie == nil {
+			continue
+		}
+		values = append(values, cookie.Value)
+	}
+	return values
 }
