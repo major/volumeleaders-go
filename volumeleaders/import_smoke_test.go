@@ -1,10 +1,15 @@
 package volumeleaders_test
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExternalImports(t *testing.T) {
@@ -18,23 +23,96 @@ func TestExternalImports(t *testing.T) {
 	cmd := exec.Command("go", "test", "./...")
 	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("external module import smoke test failed: %v\n%s", err, string(output))
+	require.NoError(t, err, "external module import smoke test failed:\n%s", string(output))
+}
+
+func TestRootPackageDependencyIsolation(t *testing.T) {
+	deps := listPackageDeps(t, "github.com/major/volumeleaders-go/volumeleaders")
+	err := forbidDependencySubstrings(deps, []string{
+		"github.com/browserutils",
+		"kooky",
+		"sqlite",
+		"keyring",
+		"dbus",
+	})
+	require.NoError(t, err)
+}
+
+func TestRootPackageDependencyIsolationFailsClosed(t *testing.T) {
+	tests := []struct {
+		name      string
+		deps      []string
+		wantError bool
+	}{
+		{
+			name: "clean dependency list",
+			deps: []string{
+				"github.com/major/volumeleaders-go/volumeleaders",
+				"net/http",
+			},
+			wantError: false,
+		},
+		{
+			name: "forbidden dependency is rejected",
+			deps: []string{
+				"github.com/major/volumeleaders-go/volumeleaders",
+				"github.com/browserutils/kooky",
+			},
+			wantError: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := forbidDependencySubstrings(tc.deps, []string{"github.com/browserutils", "kooky", "sqlite", "keyring", "dbus"})
+			if tc.wantError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "github.com/browserutils/kooky")
+				return
+			}
+
+			require.NoError(t, err)
+		})
 	}
 }
 
 func moduleRoot(t *testing.T) string {
 	t.Helper()
 	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Getwd() = %v", err)
-	}
+	require.NoError(t, err)
 	return filepath.Dir(cwd)
 }
 
 func mustWriteFile(t *testing.T, path string, contents string) {
 	t.Helper()
-	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
-		t.Fatalf("WriteFile(%q) = %v", path, err)
+	require.NoError(t, os.WriteFile(path, []byte(contents), 0o600), "WriteFile(%q)", path)
+}
+
+func listPackageDeps(t *testing.T, packagePath string) []string {
+	t.Helper()
+
+	root := moduleRoot(t)
+	cmd := exec.Command("go", "list", "-deps", "-f", "{{.ImportPath}}", packagePath)
+	cmd.Dir = root
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "go list -deps failed:\n%s", string(output))
+
+	deps := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(deps) == 1 && deps[0] == "" {
+		return nil
 	}
+
+	return deps
+}
+
+func forbidDependencySubstrings(deps []string, forbidden []string) error {
+	for _, dep := range deps {
+		for _, bad := range forbidden {
+			if strings.Contains(dep, bad) {
+				return fmt.Errorf("forbidden dependency %q found in %q", bad, dep)
+			}
+		}
+	}
+
+	return nil
 }
