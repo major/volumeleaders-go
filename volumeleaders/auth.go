@@ -16,6 +16,8 @@ const (
 	formsAuthCookieName       = ".ASPXAUTH"
 	requestVerificationCookie = "__RequestVerificationToken"
 	xsrfHeaderName            = "X-Xsrf-Token"
+	loginPath                 = "/login"
+	unknownRedirectTarget     = "unknown redirect target"
 )
 
 var (
@@ -86,7 +88,7 @@ func parseXSRFToken(body []byte) (string, error) {
 }
 
 func redirectedToLogin(resp *http.Response) bool {
-	return normalizeResponsePath(safeResponsePath(resp)) == "/login"
+	return normalizeResponsePath(safeResponsePath(resp)) == loginPath
 }
 
 func looksLikeLoginPage(resp *http.Response, body []byte) bool {
@@ -99,7 +101,7 @@ func looksLikeLoginPage(resp *http.Response, body []byte) bool {
 
 func safeResponsePath(resp *http.Response) string {
 	if resp == nil || resp.Request == nil || resp.Request.URL == nil {
-		return "unknown redirect target"
+		return unknownRedirectTarget
 	}
 	if resp.Request.URL.EscapedPath() == "" {
 		return "/"

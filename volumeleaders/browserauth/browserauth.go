@@ -14,6 +14,7 @@ import (
 	"github.com/major/volumeleaders-go/volumeleaders"
 )
 
+//nolint:gochecknoglobals // Test seam for substituting kooky.ReadCookies without touching browser stores.
 var readBrowserCookies = kooky.ReadCookies
 
 // New creates a client from the active VolumeLeaders browser session.

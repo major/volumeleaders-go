@@ -72,7 +72,12 @@ func TestSessionFromCookiesSkipsNilCookiesAndBlankHeaderNames(t *testing.T) {
 	)
 
 	assert.Len(t, session.Cookies, 1, "SessionFromCookies() copied cookies")
-	assert.Equal(t, "session-123", cookieValueFromSession(t, session, SessionCookieName), "SessionFromCookies() copied cookie")
+	assert.Equal(
+		t,
+		"session-123",
+		cookieValueFromSession(t, session, SessionCookieName),
+		"SessionFromCookies() copied cookie",
+	)
 	assert.Empty(t, session.Headers.Values(""), "SessionFromCookies() skipped blank header name")
 	assert.Equal(t, []string{"kept"}, session.Headers.Values("X-Test"), "SessionFromCookies() copied header")
 }

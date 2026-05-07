@@ -98,13 +98,17 @@ func TestSaveAlertConfigPostsMultipartForm(t *testing.T) {
 		assert.Equal(t, http.MethodPost, r.Method, "SaveAlertConfig() method")
 		assert.Equal(t, AlertConfigPath, r.URL.Path, "SaveAlertConfig() path")
 		mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		require.NoError(t, err, "ParseMediaType(SaveAlertConfig Content-Type)")
+		if !assert.NoError(t, err, "ParseMediaType(SaveAlertConfig Content-Type)") {
+			return
+		}
 		assert.Equal(t, "multipart/form-data", mediaType, "SaveAlertConfig() Content-Type")
 		assert.Equal(t, navigationAccept, r.Header.Get("Accept"), "SaveAlertConfig() Accept")
 		assert.Empty(t, r.Header.Get("X-Requested-With"), "SaveAlertConfig() X-Requested-With")
 		assert.Empty(t, r.Header.Get(xsrfHeaderName), "SaveAlertConfig() X-XSRF-Token")
 
-		require.NoError(t, r.ParseMultipartForm(64<<10), "ParseMultipartForm(SaveAlertConfig body)")
+		if !assert.NoError(t, r.ParseMultipartForm(64<<10), "ParseMultipartForm(SaveAlertConfig body)") {
+			return
+		}
 		capturedFields = r.MultipartForm.Value
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte(`ok`))
@@ -125,7 +129,12 @@ func TestSaveAlertConfigPostsMultipartForm(t *testing.T) {
 	require.NoError(t, err, "SaveAlertConfig()")
 	assert.Equal(t, []string{"42089"}, capturedFields["AlertConfigKey"], "SaveAlertConfig() AlertConfigKey")
 	assert.Equal(t, []string{"Testing 2"}, capturedFields["Name"], "SaveAlertConfig() Name")
-	assert.Equal(t, []string{"true", "false"}, capturedFields["OffsettingPrint"], "SaveAlertConfig() duplicate checkbox field")
+	assert.Equal(
+		t,
+		[]string{"true", "false"},
+		capturedFields["OffsettingPrint"],
+		"SaveAlertConfig() duplicate checkbox field",
+	)
 	assert.NotContains(t, capturedFields, "__RequestVerificationToken", "SaveAlertConfig() hidden XSRF field")
 }
 
@@ -284,13 +293,17 @@ func TestSaveWatchListConfigPostsMultipartForm(t *testing.T) {
 		assert.Equal(t, http.MethodPost, r.Method, "SaveWatchListConfig() method")
 		assert.Equal(t, WatchListConfigPath, r.URL.Path, "SaveWatchListConfig() path")
 		mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		require.NoError(t, err, "ParseMediaType(SaveWatchListConfig Content-Type)")
+		if !assert.NoError(t, err, "ParseMediaType(SaveWatchListConfig Content-Type)") {
+			return
+		}
 		assert.Equal(t, "multipart/form-data", mediaType, "SaveWatchListConfig() Content-Type")
 		assert.Equal(t, navigationAccept, r.Header.Get("Accept"), "SaveWatchListConfig() Accept")
 		assert.Empty(t, r.Header.Get("X-Requested-With"), "SaveWatchListConfig() X-Requested-With")
 		assert.Empty(t, r.Header.Get(xsrfHeaderName), "SaveWatchListConfig() X-XSRF-Token")
 
-		require.NoError(t, r.ParseMultipartForm(64<<10), "ParseMultipartForm(SaveWatchListConfig body)")
+		if !assert.NoError(t, r.ParseMultipartForm(64<<10), "ParseMultipartForm(SaveWatchListConfig body)") {
+			return
+		}
 		capturedFields = r.MultipartForm.Value
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte(`ok`))
@@ -310,7 +323,12 @@ func TestSaveWatchListConfigPostsMultipartForm(t *testing.T) {
 	require.NoError(t, err, "SaveWatchListConfig()")
 	assert.Equal(t, []string{"6307"}, capturedFields["SearchTemplateKey"], "SaveWatchListConfig() SearchTemplateKey")
 	assert.Equal(t, []string{"SPY,AAPL"}, capturedFields["Tickers"], "SaveWatchListConfig() Tickers")
-	assert.Equal(t, []string{"true", "false"}, capturedFields["NormalPrintsSelected"], "SaveWatchListConfig() duplicate checkbox field")
+	assert.Equal(
+		t,
+		[]string{"true", "false"},
+		capturedFields["NormalPrintsSelected"],
+		"SaveWatchListConfig() duplicate checkbox field",
+	)
 	assert.NotContains(t, capturedFields, "__RequestVerificationToken", "SaveWatchListConfig() hidden XSRF field")
 }
 
@@ -478,7 +496,12 @@ func TestChartTradeLevelsUseCapturedPaths(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		paths = append(paths, r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method, "chart trade levels method")
-		assert.Equal(t, "application/x-www-form-urlencoded; charset=UTF-8", r.Header.Get("Content-Type"), "chart trade levels Content-Type")
+		assert.Equal(
+			t,
+			"application/x-www-form-urlencoded; charset=UTF-8",
+			r.Header.Get("Content-Type"),
+			"chart trade levels Content-Type",
+		)
 		assert.Equal(t, xmlHTTPRequest, r.Header.Get("X-Requested-With"), "chart trade levels X-Requested-With")
 		assert.Equal(t, "token-123", r.Header.Get(xsrfHeaderName), "chart trade levels X-XSRF-Token")
 		body, err := io.ReadAll(r.Body)
@@ -516,8 +539,8 @@ func TestChartTradeLevelsUseCapturedPaths(t *testing.T) {
 	assert.Equal(t, []string{Chart0GetTradeLevelsPath, ChartGetTradeLevelsPath}, paths, "chart trade level paths")
 	require.Len(t, bodies, 2, "chart trade levels request bodies")
 	for _, body := range bodies {
-		form, err := url.ParseQuery(body)
-		require.NoError(t, err, "ParseQuery(chart trade levels body)")
+		form, parseErr := url.ParseQuery(body)
+		require.NoError(t, parseErr, "ParseQuery(chart trade levels body)")
 		checks := map[string]string{
 			"draw":             "1",
 			"length":           "-1",
@@ -660,8 +683,13 @@ func TestVolumeLeaderboardsUseAgentContracts(t *testing.T) {
 	client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
 	require.NoError(t, err, "NewClient()")
 	request := VolumeRequest{
-		DataTables: DataTablesRequest{Draw: 1, Start: 0, Length: 100, Order: []DataTablesOrder{{Column: 1, Dir: ascendingOrderDir}}},
-		Filters:    url.Values{"Date": {"2026-05-07"}, "Tickers": {"AMD"}},
+		DataTables: DataTablesRequest{
+			Draw:   1,
+			Start:  0,
+			Length: 100,
+			Order:  []DataTablesOrder{{Column: 1, Dir: ascendingOrderDir}},
+		},
+		Filters: url.Values{"Date": {"2026-05-07"}, "Tickers": {"AMD"}},
 	}
 
 	inst, err := client.GetInstitutionalVolume(context.Background(), request)
@@ -681,8 +709,8 @@ func TestVolumeLeaderboardsUseAgentContracts(t *testing.T) {
 	require.Len(t, bodies, 3, "volume leaderboard request bodies")
 
 	for i, body := range bodies {
-		form, err := url.ParseQuery(body)
-		require.NoError(t, err, "ParseQuery(volume leaderboard body %d)", i)
+		form, parseErr := url.ParseQuery(body)
+		require.NoError(t, parseErr, "ParseQuery(volume leaderboard body %d)", i)
 		assert.Equal(t, "Ticker", form.Get("columns[0][data]"), "volume form %d columns[0][data]", i)
 		assert.Equal(t, "Price", form.Get("columns[2][data]"), "volume form %d columns[2][data]", i)
 		assert.Equal(t, "2026-05-07", form.Get("Date"), "volume form %d Date", i)
@@ -894,8 +922,18 @@ func TestWelcomeDataTablesEndpointsPostCapturedColumns(t *testing.T) {
 	clusterForm, err := url.ParseQuery(bodies[1])
 	require.NoError(t, err, "ParseQuery(GetWelcomeTradeClusters body)")
 	assert.Equal(t, "8", clusterForm.Get("draw"), "GetWelcomeTradeClusters() draw")
-	assert.Equal(t, "TradeClusterRank", clusterForm.Get("columns[1][data]"), "GetWelcomeTradeClusters() columns[1][data]")
-	assert.Equal(t, "LastComparibleTradeClusterDate", clusterForm.Get("columns[4][data]"), "GetWelcomeTradeClusters() columns[4][data]")
+	assert.Equal(
+		t,
+		"TradeClusterRank",
+		clusterForm.Get("columns[1][data]"),
+		"GetWelcomeTradeClusters() columns[1][data]",
+	)
+	assert.Equal(
+		t,
+		"LastComparibleTradeClusterDate",
+		clusterForm.Get("columns[4][data]"),
+		"GetWelcomeTradeClusters() columns[4][data]",
+	)
 	assert.Equal(t, "2026-05-08", clusterForm.Get("Date"), "GetWelcomeTradeClusters() Date")
 }
 
@@ -936,7 +974,12 @@ func TestGetTradeLevelEndpointsPostCapturedColumns(t *testing.T) {
 	require.NoError(t, err, "GetTradeLevelTouches()")
 	assert.Equal(t, 6, levels.Data[0].TradeLevelRank, "GetTradeLevels() TradeLevelRank")
 	assert.Equal(t, 6, touches.Data[0].TradeLevelRank, "GetTradeLevelTouches() TradeLevelRank")
-	assert.Equal(t, []string{TradeLevelsGetTradeLevelsPath, TradeLevelTouchesGetTradeLevelTouchesPath}, paths, "trade level paths")
+	assert.Equal(
+		t,
+		[]string{TradeLevelsGetTradeLevelsPath, TradeLevelTouchesGetTradeLevelTouchesPath},
+		paths,
+		"trade level paths",
+	)
 	require.Len(t, bodies, 2, "trade level request bodies")
 
 	levelsForm, err := url.ParseQuery(bodies[0])
@@ -949,7 +992,7 @@ func TestGetTradeLevelEndpointsPostCapturedColumns(t *testing.T) {
 	require.NoError(t, err, "ParseQuery(GetTradeLevelTouches body)")
 	assert.Equal(t, "10", touchesForm.Get("draw"), "GetTradeLevelTouches() draw")
 	assert.Equal(t, "FullDateTime", touchesForm.Get("columns[0][data]"), "GetTradeLevelTouches() columns[0][data]")
-	assert.Equal(t, "", touchesForm.Get("columns[12][data]"), "GetTradeLevelTouches() trailing action column")
+	assert.Empty(t, touchesForm.Get("columns[12][data]"), "GetTradeLevelTouches() trailing action column")
 	assert.Equal(t, "2026-05-07", touchesForm.Get("StartDate"), "GetTradeLevelTouches() StartDate")
 }
 

@@ -15,9 +15,11 @@ import (
 const maxRedirects = 10
 
 const (
-	jsonAccept       = "application/json, text/javascript, */*; q=0.01"
-	navigationAccept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-	xmlHTTPRequest   = "XMLHttpRequest"
+	alertConfigsRedirectPath     = "/alertconfigs"
+	jsonAccept                   = "application/json, text/javascript, */*; q=0.01"
+	navigationAccept             = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+	watchListConfigsRedirectPath = "/watchlistconfigs"
+	xmlHTTPRequest               = "XMLHttpRequest"
 )
 
 // Client sends authenticated browser-session-backed requests to VolumeLeaders.
@@ -173,16 +175,8 @@ func (c *Client) postWithOptions(
 	if redirectedToLogin(resp) {
 		return sessionExpiredError{redirectPath: safeResponsePath(resp)}
 	}
-	if opts.AllowRedirectSuccess && result == nil && resp.StatusCode >= 300 && resp.StatusCode < 400 {
-		if redirectsToLoginLocation(resp) {
-			return sessionExpiredError{redirectPath: resp.Header.Get("Location")}
-		}
-		if redirectsToExpectedLocation(resp, opts.ExpectedRedirectPath) {
-			return nil
-		}
-	}
-	if opts.AllowRedirectSuccess && result == nil && resp.StatusCode >= 200 && resp.StatusCode <= 299 && wasRedirected(req, resp, opts.ExpectedRedirectPath) {
-		return nil
+	if handled, redirectErr := redirectSuccess(req, resp, result, opts); handled {
+		return redirectErr
 	}
 
 	body, err := c.readBody(resp.Body)
@@ -203,6 +197,22 @@ func (c *Client) postWithOptions(
 		return contentError(resp, body, decodeErr)
 	}
 	return nil
+}
+
+func redirectSuccess(req *http.Request, resp *http.Response, result any, opts postOptions) (bool, error) {
+	if !opts.AllowRedirectSuccess || result != nil {
+		return false, nil
+	}
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		if redirectsToLoginLocation(resp) {
+			return true, sessionExpiredError{redirectPath: resp.Header.Get("Location")}
+		}
+		return redirectsToExpectedLocation(resp, opts.ExpectedRedirectPath), nil
+	}
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+		return wasRedirected(req, resp, opts.ExpectedRedirectPath), nil
+	}
+	return false, nil
 }
 
 func (c *Client) setHeaders(req *http.Request) {
@@ -234,9 +244,9 @@ func (c *Client) resolve(path string) string {
 func multipartSuccessRedirectPath(path string) string {
 	switch path {
 	case AlertConfigPath:
-		return "/alertconfigs"
+		return alertConfigsRedirectPath
 	case WatchListConfigPath:
-		return "/watchlistconfigs"
+		return watchListConfigsRedirectPath
 	default:
 		return ""
 	}
@@ -251,7 +261,7 @@ func redirectsToLoginLocation(resp *http.Response) bool {
 	if err != nil {
 		return false
 	}
-	return normalizeResponsePath(locationURL.EscapedPath()) == "/login"
+	return normalizeResponsePath(locationURL.EscapedPath()) == loginPath
 }
 
 func redirectsToExpectedLocation(resp *http.Response, expectedPath string) bool {

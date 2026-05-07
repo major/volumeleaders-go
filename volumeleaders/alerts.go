@@ -211,7 +211,7 @@ func AlertConfigsColumns() []DataTablesColumn {
 		{Data: columnName, Name: "", Searchable: true, Orderable: false},
 		{Data: columnName, Name: columnName, Searchable: true, Orderable: true},
 		{Data: columnTickers, Name: columnTickers, Searchable: true, Orderable: true},
-		{Data: "Conditions", Name: "Conditions", Searchable: true, Orderable: false},
+		{Data: columnConditions, Name: columnConditions, Searchable: true, Orderable: false},
 	}
 }
 

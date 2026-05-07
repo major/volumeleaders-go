@@ -54,7 +54,12 @@ func InstitutionalVolumeColumns() []DataTablesColumn {
 		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
 		{Data: "TotalInstitutionalVolume", Name: "TotalInstitutionalVolume", Searchable: true, Orderable: true},
 		{Data: "TotalInstitutionalDollars", Name: "TotalInstitutionalDollars", Searchable: true, Orderable: true},
-		{Data: "TotalInstitutionalDollarsRank", Name: "TotalInstitutionalDollarsRank", Searchable: true, Orderable: true},
+		{
+			Data:       columnTotalInstitutionalDollarsRank,
+			Name:       columnTotalInstitutionalDollarsRank,
+			Searchable: true,
+			Orderable:  true,
+		},
 		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
 		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
 	}

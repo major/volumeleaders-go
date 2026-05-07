@@ -66,9 +66,18 @@ func TestVolumeLeadersCookiesSelectsRequiredCookieValues(t *testing.T) {
 func TestBrowserStoreCountCountsDistinctBrowserProfiles(t *testing.T) {
 	cookies := kooky.Cookies{
 		nil,
-		{Cookie: http.Cookie{Name: volumeleaders.SessionCookieName}, Browser: testBrowserInfo{browser: "firefox", profile: "default"}},
-		{Cookie: http.Cookie{Name: volumeleaders.FormsAuthCookieName}, Browser: testBrowserInfo{browser: "firefox", profile: "default"}},
-		{Cookie: http.Cookie{Name: volumeleaders.RequestVerificationCookieName}, Browser: testBrowserInfo{browser: "firefox", profile: "work"}},
+		{
+			Cookie:  http.Cookie{Name: volumeleaders.SessionCookieName},
+			Browser: testBrowserInfo{browser: "firefox", profile: "default"},
+		},
+		{
+			Cookie:  http.Cookie{Name: volumeleaders.FormsAuthCookieName},
+			Browser: testBrowserInfo{browser: "firefox", profile: "default"},
+		},
+		{
+			Cookie:  http.Cookie{Name: volumeleaders.RequestVerificationCookieName},
+			Browser: testBrowserInfo{browser: "firefox", profile: "work"},
+		},
 		{Cookie: http.Cookie{Name: "extra"}, Browser: testBrowserInfo{browser: "chromium", profile: "default"}},
 	}
 
@@ -96,11 +105,21 @@ func TestExtractCookiesReportsBrowserDiagnostics(t *testing.T) {
 	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
 		readCalls++
 		if readCalls == 1 {
-			return kooky.Cookies{{Cookie: http.Cookie{Name: volumeleaders.SessionCookieName, Value: "session-id"}}}, errors.New("valid store failed")
+			return kooky.Cookies{
+					{Cookie: http.Cookie{Name: volumeleaders.SessionCookieName, Value: "session-id"}},
+				}, errors.New(
+					"valid store failed",
+				)
 		}
 		return kooky.Cookies{
-			{Cookie: http.Cookie{Name: volumeleaders.SessionCookieName, Value: "session-id"}, Browser: testBrowserInfo{browser: "firefox", profile: "default"}},
-			{Cookie: http.Cookie{Name: volumeleaders.FormsAuthCookieName, Value: "forms-auth"}, Browser: testBrowserInfo{browser: "chromium", profile: "work"}},
+			{
+				Cookie:  http.Cookie{Name: volumeleaders.SessionCookieName, Value: "session-id"},
+				Browser: testBrowserInfo{browser: "firefox", profile: "default"},
+			},
+			{
+				Cookie:  http.Cookie{Name: volumeleaders.FormsAuthCookieName, Value: "forms-auth"},
+				Browser: testBrowserInfo{browser: "chromium", profile: "work"},
+			},
 		}, errors.New("all stores failed")
 	})
 
@@ -132,7 +151,11 @@ func TestNewBuildsClientFromBrowserCookiesAndFetchedXSRFToken(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	client, err := New(context.Background(), volumeleaders.WithBaseURL(server.URL), volumeleaders.WithHTTPClient(server.Client()))
+	client, err := New(
+		context.Background(),
+		volumeleaders.WithBaseURL(server.URL),
+		volumeleaders.WithHTTPClient(server.Client()),
+	)
 	if err != nil {
 		t.Fatalf("New() error = %v, want nil", err)
 	}

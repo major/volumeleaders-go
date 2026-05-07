@@ -52,7 +52,7 @@ func (c *Client) GetEarnings(ctx context.Context, req EarningsRequest) (*DataTab
 // table.
 func EarningsColumns() []DataTablesColumn {
 	return []DataTablesColumn{
-		{Data: "Date", Name: "Earnings Date", Searchable: true, Orderable: true},
+		{Data: columnDate, Name: "Earnings Date", Searchable: true, Orderable: true},
 		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
 		{Data: columnCurrent, Name: columnCurrent, Searchable: true, Orderable: false},
 		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},

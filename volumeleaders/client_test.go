@@ -34,11 +34,23 @@ func TestRedirectHelpersHandleLocations(t *testing.T) {
 	invalidResp := &http.Response{Header: http.Header{"Location": {"http://[::1"}}}
 
 	assert.True(t, redirectsToLoginLocation(loginResp), "redirectsToLoginLocation(login redirect)")
-	assert.False(t, redirectsToLoginLocation(&http.Response{Header: http.Header{}}), "redirectsToLoginLocation(missing location)")
+	assert.False(
+		t,
+		redirectsToLoginLocation(&http.Response{Header: http.Header{}}),
+		"redirectsToLoginLocation(missing location)",
+	)
 	assert.False(t, redirectsToLoginLocation(invalidResp), "redirectsToLoginLocation(invalid location)")
-	assert.True(t, redirectsToExpectedLocation(expectedResp, "/alertconfigs"), "redirectsToExpectedLocation(expected redirect)")
+	assert.True(
+		t,
+		redirectsToExpectedLocation(expectedResp, "/alertconfigs"),
+		"redirectsToExpectedLocation(expected redirect)",
+	)
 	assert.False(t, redirectsToExpectedLocation(expectedResp, ""), "redirectsToExpectedLocation(empty expected path)")
-	assert.False(t, redirectsToExpectedLocation(invalidResp, "/alertconfigs"), "redirectsToExpectedLocation(invalid location)")
+	assert.False(
+		t,
+		redirectsToExpectedLocation(invalidResp, "/alertconfigs"),
+		"redirectsToExpectedLocation(invalid location)",
+	)
 }
 
 func TestWasRedirected(t *testing.T) {
@@ -50,5 +62,9 @@ func TestWasRedirected(t *testing.T) {
 	assert.True(t, wasRedirected(req, resp, "/alertconfigs"), "wasRedirected(redirected response)")
 	assert.False(t, wasRedirected(req, resp, ""), "wasRedirected(empty expected path)")
 	assert.False(t, wasRedirected(nil, resp, "/alertconfigs"), "wasRedirected(nil request)")
-	assert.False(t, wasRedirected(req, &http.Response{Request: &http.Request{URL: originalURL}}, "/alertconfigs"), "wasRedirected(same URL)")
+	assert.False(
+		t,
+		wasRedirected(req, &http.Response{Request: &http.Request{URL: originalURL}}, "/alertconfigs"),
+		"wasRedirected(same URL)",
+	)
 }

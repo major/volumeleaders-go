@@ -135,8 +135,8 @@ func TestUnexpectedContentHelpers(t *testing.T) {
 func TestContentErrorUnwrapWithoutCause(t *testing.T) {
 	err := &ContentError{}
 
-	assert.True(t, errors.Is(err, ErrUnexpectedContent), "errors.Is(ContentError without cause, ErrUnexpectedContent)")
-	assert.False(t, errors.Is(err, ErrInvalidQuery), "errors.Is(ContentError without cause, ErrInvalidQuery)")
+	require.ErrorIs(t, err, ErrUnexpectedContent, "errors.Is(ContentError without cause, ErrUnexpectedContent)")
+	assert.NotErrorIs(t, err, ErrInvalidQuery, "errors.Is(ContentError without cause, ErrInvalidQuery)")
 }
 
 func TestIsAuthError(t *testing.T) {

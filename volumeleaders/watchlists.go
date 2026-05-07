@@ -234,7 +234,7 @@ func WatchListTickersColumns() []DataTablesColumn {
 		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
 		{Data: "NearestTop10TradeDate", Name: "NearestTop10TradeDate", Searchable: true, Orderable: true},
 		{Data: "NearestTop10TradeClusterDate", Name: "NearestTop10TradeClusterDate", Searchable: true, Orderable: true},
-		{Data: "NearestTop10TradeLevel", Name: "NearestTop10TradeLevel", Searchable: true, Orderable: true},
+		{Data: columnNearestTop10TradeLevel, Name: columnNearestTop10TradeLevel, Searchable: true, Orderable: true},
 		{Data: columnTicker, Name: columnCharts, Searchable: true, Orderable: false},
 	}
 }

@@ -7,8 +7,10 @@ import (
 
 const (
 	columnCharts                             = "Charts"
+	columnConditions                         = "Conditions"
 	columnCumulativeDistribution             = "CumulativeDistribution"
 	columnCurrent                            = "Current"
+	columnDate                               = "Date"
 	columnDates                              = "Dates"
 	columnDollars                            = "Dollars"
 	columnDollarsName                        = "$$"
@@ -22,6 +24,7 @@ const (
 	columnLevelRank                          = "Level Rank"
 	columnMinFullTimeString24                = "MinFullTimeString24"
 	columnName                               = "Name"
+	columnNearestTop10TradeLevel             = "NearestTop10TradeLevel"
 	columnPercentName                        = "PCT"
 	columnPrice                              = "Price"
 	columnRankName                           = "Rank"
@@ -40,6 +43,7 @@ const (
 	columnTradeRank                          = "TradeRank"
 	columnTrades                             = "Trades"
 	columnTradeShortName                     = "Trade"
+	columnTotalInstitutionalDollarsRank      = "TotalInstitutionalDollarsRank"
 )
 
 func (c *Client) postDataTables(
