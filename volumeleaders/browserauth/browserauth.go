@@ -62,10 +62,10 @@ func FindSession(ctx context.Context, opts ...Option) (volumeleaders.Session, er
 	}
 
 	browserCookies, err := readBrowserCookies(ctx, kooky.Valid, kooky.DomainHasSuffix(volumeleaders.CookieDomain))
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return volumeleaders.Session{}, ctxErr
+	}
 	if err != nil && len(browserCookies) == 0 {
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			return volumeleaders.Session{}, ctxErr
-		}
 		return volumeleaders.Session{}, fmt.Errorf("%w: read browser cookies", volumeleaders.ErrBrowserCookiesUnavailable)
 	}
 

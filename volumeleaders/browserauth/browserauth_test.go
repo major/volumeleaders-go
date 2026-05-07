@@ -258,19 +258,35 @@ func TestFindSessionValidatesDiscoveredSession(t *testing.T) {
 }
 
 func TestFindSessionRespectsContextCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+	tests := []struct {
+		name    string
+		cookies kooky.Cookies
+	}{
+		{
+			name: "no cookies",
+		},
+		{
+			name: "partial cookies",
+			cookies: kooky.Cookies{
+				{Cookie: http.Cookie{Name: volumeleaders.SessionCookieName, Value: "session-id"}},
+			},
+		},
+	}
 
-	stubReadBrowserCookies(t, func(ctx context.Context, _ ...kooky.Filter) (kooky.Cookies, error) {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		return requiredKookyCookies(), nil
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
 
-	_, err := FindSession(ctx)
-	require.Error(t, err, "FindSession() with canceled context must return error")
-	assert.ErrorIs(t, err, context.Canceled, "FindSession() with canceled context must return context.Canceled")
+			stubReadBrowserCookies(t, func(ctx context.Context, _ ...kooky.Filter) (kooky.Cookies, error) {
+				return tt.cookies, ctx.Err()
+			})
+
+			_, err := FindSession(ctx)
+			require.Error(t, err, "FindSession() with canceled context must return error")
+			assert.ErrorIs(t, err, context.Canceled, "FindSession() with canceled context must return context.Canceled")
+		})
+	}
 }
 
 func TestNewBuildsClientFromBrowserCookiesAndFetchedXSRFToken(t *testing.T) {
