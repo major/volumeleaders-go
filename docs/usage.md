@@ -34,6 +34,58 @@ if err != nil {
 
 This path reads local browser cookie stores with `github.com/browserutils/kooky`, fetches the current XSRF token from `/ExecutiveSummary`, and builds a `Client`. It is convenient for desktop automation, but service and container callers should prefer explicit sessions so browser-store access stays outside the core API layer. The root `volumeleaders` package does not import browser-store, SQLite, or desktop keyring packages.
 
+## Browser auth session discovery
+
+`browserauth.FindSession` is the preferred entry point for desktop automation where the user is already logged in to VolumeLeaders in a supported local browser. It reads cookies from local browser stores, validates the session by fetching the current XSRF token, and returns a `volumeleaders.Session` ready for `NewClient`.
+
+The root `volumeleaders` package does not import browser-store, SQLite, or desktop keyring packages. Browser-store access stays isolated to the `browserauth` subpackage.
+
+### Default discovery
+
+```go
+import (
+    "github.com/major/volumeleaders-go/volumeleaders"
+    "github.com/major/volumeleaders-go/volumeleaders/browserauth"
+)
+
+session, err := browserauth.FindSession(ctx)
+if err != nil {
+    return err
+}
+client, err := volumeleaders.NewClient(session)
+if err != nil {
+    return err
+}
+```
+
+### Explicit browser selection
+
+When multiple supported browsers are installed, pass `WithBrowser` to restrict discovery to one. `FindSession` returns `ErrBrowserUnavailable` if that browser has no matching VolumeLeaders cookies.
+
+```go
+session, err := browserauth.FindSession(ctx, browserauth.WithBrowser("firefox"))
+```
+
+Combine with `WithProfile` to target a specific browser profile:
+
+```go
+session, err := browserauth.FindSession(ctx,
+    browserauth.WithBrowser("chrome"),
+    browserauth.WithProfile("Default"),
+)
+```
+
+### Skip validation
+
+`WithoutValidation` skips the XSRF token fetch. The returned `Session` contains the discovered browser cookies but has an empty `XSRFToken` field. Use this when the caller will supply the token separately or when the validation request is not needed.
+
+```go
+session, err := browserauth.FindSession(ctx, browserauth.WithoutValidation())
+// session.XSRFToken == ""
+```
+
+Authenticated DataTables endpoints require a valid XSRF token. Callers using `WithoutValidation` must populate `XSRFToken` before making those requests.
+
 ## Trades
 
 `ListTrades` wraps `/Trades/GetTrades` with a typed query so callers do not need to know DataTables field names or VolumeLeaders form keys.
