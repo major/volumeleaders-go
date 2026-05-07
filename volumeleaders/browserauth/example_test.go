@@ -27,7 +27,6 @@ func ExampleFindSession() {
 	}
 
 	_ = client
-	// Output:
 }
 
 // ExampleFindSession_withBrowser shows explicit browser selection when multiple
@@ -50,7 +49,6 @@ func ExampleFindSession_withBrowser() {
 	}
 
 	_ = client
-	// Output:
 }
 
 // ExampleFindSession_withoutValidation shows skipping the XSRF token fetch.

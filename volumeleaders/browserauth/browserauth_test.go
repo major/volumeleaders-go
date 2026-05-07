@@ -149,7 +149,7 @@ func TestFindSessionWithBrowserSelectsOnlyMatchingBrowser(t *testing.T) {
 		}, nil
 	})
 
-	session, err := FindSession(context.Background(), WithBrowser("firefox"))
+	session, err := FindSession(context.Background(), WithBrowser("firefox"), WithoutValidation())
 	require.NoError(t, err, "FindSession(WithBrowser(%q)) returned unexpected error", "firefox")
 
 	assertSessionCookieValues(t, session, map[string]string{
@@ -199,7 +199,7 @@ func TestFindSessionWithProfileSelectsOnlyMatchingProfile(t *testing.T) {
 				}, nil
 			})
 
-			session, err := FindSession(context.Background(), WithProfile(tt.profile))
+			session, err := FindSession(context.Background(), WithProfile(tt.profile), WithoutValidation())
 			require.NoError(t, err, "FindSession(WithProfile(%q)) returned unexpected error", tt.profile)
 			assertSessionCookieValues(t, session, tt.wantCookies)
 		})
@@ -216,7 +216,7 @@ func TestFindSessionWithBrowserNoFallback(t *testing.T) {
 		}, nil
 	})
 
-	session, err := FindSession(context.Background(), WithBrowser("chrome"))
+	session, err := FindSession(context.Background(), WithBrowser("chrome"), WithoutValidation())
 	require.Error(t, err, "FindSession(WithBrowser(%q)) must fail when selected browser lacks required cookies", "chrome")
 	assert.Empty(t, session.Cookies, "FindSession(WithBrowser(%q)) must not fall back to unselected browser cookies", "chrome")
 }
@@ -231,9 +231,46 @@ func TestFindSessionWithProfileNoFallback(t *testing.T) {
 		}, nil
 	})
 
-	session, err := FindSession(context.Background(), WithProfile("default"))
+	session, err := FindSession(context.Background(), WithProfile("default"), WithoutValidation())
 	require.Error(t, err, "FindSession(WithProfile(%q)) must fail when selected profile lacks required cookies", "default")
 	assert.Empty(t, session.Cookies, "FindSession(WithProfile(%q)) must not fall back to unselected profile cookies", "default")
+}
+
+func TestFindSessionValidatesDiscoveredSession(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return requiredKookyCookies(), nil
+	})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/ExecutiveSummary", r.URL.Path, "FindSession() validation request path mismatch")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<html><body><input name="__RequestVerificationToken" value="test-xsrf-token"></body></html>`))
+	}))
+	t.Cleanup(server.Close)
+
+	session, err := FindSession(context.Background(), WithClientOptions(
+		volumeleaders.WithBaseURL(server.URL),
+		volumeleaders.WithHTTPClient(server.Client()),
+	))
+	require.NoError(t, err, "FindSession() returned unexpected error")
+	assert.Equal(t, "test-xsrf-token", session.XSRFToken, "FindSession() must return XSRF token from validation")
+	assert.NotEmpty(t, session.Cookies, "FindSession() must return cookies")
+}
+
+func TestFindSessionRespectsContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	stubReadBrowserCookies(t, func(ctx context.Context, _ ...kooky.Filter) (kooky.Cookies, error) {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		return requiredKookyCookies(), nil
+	})
+
+	_, err := FindSession(ctx)
+	require.Error(t, err, "FindSession() with canceled context must return error")
+	assert.ErrorIs(t, err, context.Canceled, "FindSession() with canceled context must return context.Canceled")
 }
 
 func TestNewBuildsClientFromBrowserCookiesAndFetchedXSRFToken(t *testing.T) {
