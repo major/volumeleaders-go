@@ -15,7 +15,11 @@ import (
 func TestImportSmoke(t *testing.T) {
 	root := moduleRoot(t)
 	dir := t.TempDir()
-	goMod := "module volumeleaders_import_smoke\n\ngo 1.26.3\n\nrequire github.com/major/volumeleaders-go v0.0.0\n\nreplace github.com/major/volumeleaders-go => " + root + "\n"
+	goMod := fmt.Sprintf(
+		"module volumeleaders_import_smoke\n\ngo %s\n\nrequire github.com/major/volumeleaders-go v0.0.0\n\nreplace github.com/major/volumeleaders-go => %s\n",
+		moduleGoDirective(t),
+		root,
+	)
 	goTest := "package smoke\n\nimport (\n\t\"testing\"\n\n\tvolumeleaders \"github.com/major/volumeleaders-go/volumeleaders\"\n)\n\nfunc TestCoreExplicitSessionImport(t *testing.T) {\n\t_ = t\n\t_ = volumeleaders.NewClient\n\t_ = volumeleaders.NewSession\n\t_ = volumeleaders.SessionFromCookies\n}\n"
 	mustWriteFile(t, filepath.Join(dir, "go.mod"), goMod)
 	mustWriteFile(t, filepath.Join(dir, "smoke_test.go"), goTest)
@@ -64,7 +68,13 @@ func TestRootPackageDependencyIsolationFailsClosed(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := forbidDependencySubstrings(tc.deps, []string{"github.com/browserutils", "kooky", "sqlite", "keyring", "dbus"})
+			err := forbidDependencySubstrings(tc.deps, []string{
+				"github.com/browserutils",
+				"kooky",
+				"sqlite",
+				"keyring",
+				"dbus",
+			})
 			if tc.wantError {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "github.com/browserutils/kooky")
@@ -81,6 +91,21 @@ func moduleRoot(t *testing.T) string {
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
 	return filepath.Dir(cwd)
+}
+
+func moduleGoDirective(t *testing.T) string {
+	t.Helper()
+
+	goMod, err := os.ReadFile(filepath.Join(moduleRoot(t), "go.mod"))
+	require.NoError(t, err)
+
+	for line := range strings.Lines(string(goMod)) {
+		if version, ok := strings.CutPrefix(strings.TrimSpace(line), "go "); ok {
+			return strings.TrimSpace(version)
+		}
+	}
+	require.FailNow(t, "root go.mod is missing a go directive")
+	return ""
 }
 
 func mustWriteFile(t *testing.T, path string, contents string) {

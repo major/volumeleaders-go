@@ -12,7 +12,9 @@ var ErrProfileUnavailable = errors.New("volumeleaders profile unavailable")
 var ErrRequiredCookieMissing = errors.New("volumeleaders required cookie missing")
 
 // ErrRequestVerificationTokenMissing reports that the request verification token was not found.
-var ErrRequestVerificationTokenMissing = errors.New("volumeleaders request verification token missing")
+var ErrRequestVerificationTokenMissing = errors.New(
+	"volumeleaders request verification token missing",
+)
 
 // ErrValidationFailed reports that session validation against VolumeLeaders failed.
 var ErrValidationFailed = errors.New("volumeleaders session validation failed")
@@ -24,10 +26,16 @@ type ValidationError struct {
 
 // Error returns a human-readable validation failure.
 func (e *ValidationError) Error() string {
+	if e == nil || e.Err == nil {
+		return ErrValidationFailed.Error()
+	}
 	return "volumeleaders session validation failed: " + e.Err.Error()
 }
 
 // Unwrap returns validation failure causes for [errors.Is] matching.
 func (e *ValidationError) Unwrap() []error {
+	if e == nil || e.Err == nil {
+		return []error{ErrValidationFailed}
+	}
 	return []error{ErrValidationFailed, e.Err}
 }

@@ -28,7 +28,12 @@ func TestFindSessionAcceptsBrowserauthLocalOptions(t *testing.T) {
 		),
 	}
 
-	assert.Len(t, options, 4, "FindSession options contract should include browser, profile, validation, and client bridges")
+	assert.Len(
+		t,
+		options,
+		4,
+		"FindSession options contract should include browser, profile, validation, and client bridges",
+	)
 }
 
 func TestFindSessionWithoutValidationReturnsCookiesWithoutXSRFToken(t *testing.T) {
@@ -54,16 +59,34 @@ func TestFindSessionBrowserauthErrorContract(t *testing.T) {
 	}{
 		{name: "browser unavailable", err: ErrBrowserUnavailable, want: ErrBrowserUnavailable},
 		{name: "profile unavailable", err: ErrProfileUnavailable, want: ErrProfileUnavailable},
-		{name: "required cookie missing", err: ErrRequiredCookieMissing, want: ErrRequiredCookieMissing},
-		{name: "request verification token missing", err: ErrRequestVerificationTokenMissing, want: ErrRequestVerificationTokenMissing},
-		{name: "session expired", err: volumeleaders.ErrSessionExpired, want: volumeleaders.ErrSessionExpired},
+		{
+			name: "required cookie missing",
+			err:  ErrRequiredCookieMissing,
+			want: ErrRequiredCookieMissing,
+		},
+		{
+			name: "request verification token missing",
+			err:  ErrRequestVerificationTokenMissing,
+			want: ErrRequestVerificationTokenMissing,
+		},
+		{
+			name: "session expired",
+			err:  volumeleaders.ErrSessionExpired,
+			want: volumeleaders.ErrSessionExpired,
+		},
 		{name: "validation request failed", err: ErrValidationFailed, want: ErrValidationFailed},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wrapped := errors.Join(tt.err)
-			assert.ErrorIs(t, wrapped, tt.want, "FindSession error %q must be matchable with errors.Is", tt.name)
+			assert.ErrorIs(
+				t,
+				wrapped,
+				tt.want,
+				"FindSession error %q must be matchable with errors.Is",
+				tt.name,
+			)
 		})
 	}
 }
@@ -72,8 +95,23 @@ func TestFindSessionValidationFailureSupportsErrorsAs(t *testing.T) {
 	validationErr := &ValidationError{Err: errors.New("validation request failed")}
 
 	var got *ValidationError
-	assert.ErrorAs(t, validationErr, &got, "FindSession validation request failures must be matchable with errors.As")
-	assert.ErrorIs(t, validationErr, ErrValidationFailed, "FindSession validation request failures must wrap ErrValidationFailed")
+	require.ErrorAs(t, validationErr, &got,
+		"FindSession validation request failures must be matchable with errors.As")
+	require.ErrorIs(t, validationErr, ErrValidationFailed,
+		"FindSession validation request failures must wrap ErrValidationFailed")
+}
+
+func TestValidationErrorHandlesNilCause(t *testing.T) {
+	validationErr := &ValidationError{}
+
+	assert.Equal(t, ErrValidationFailed.Error(), validationErr.Error())
+	require.ErrorIs(t, validationErr, ErrValidationFailed,
+		"ValidationError with nil cause must still wrap ErrValidationFailed")
+
+	var nilValidationErr *ValidationError
+	assert.Equal(t, ErrValidationFailed.Error(), nilValidationErr.Error())
+	require.ErrorIs(t, nilValidationErr, ErrValidationFailed,
+		"nil ValidationError receiver must still wrap ErrValidationFailed")
 }
 
 func TestRootPackageDoesNotExposeBrowserauthOptions(t *testing.T) {
@@ -81,7 +119,8 @@ func TestRootPackageDoesNotExposeBrowserauthOptions(t *testing.T) {
 
 	for _, symbol := range []string{"WithBrowser", "WithProfile", "WithoutValidation"} {
 		t.Run(symbol, func(t *testing.T) {
-			assert.NotContains(t, output, symbol, "root volumeleaders package must not expose browserauth option symbol %q", symbol)
+			assert.NotContains(t, output, symbol,
+				"root volumeleaders package must not expose browserauth option symbol %q", symbol)
 		})
 	}
 }
@@ -99,6 +138,11 @@ func goDocVolumeleadersRoot(t *testing.T) string {
 
 	cmd := exec.Command("go", "doc", "github.com/major/volumeleaders-go/volumeleaders")
 	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, "go doc volumeleaders root failed: %s", strings.TrimSpace(string(output)))
+	require.NoError(
+		t,
+		err,
+		"go doc volumeleaders root failed: %s",
+		strings.TrimSpace(string(output)),
+	)
 	return string(output)
 }
