@@ -236,6 +236,135 @@ func TestFindSessionWithProfileNoFallback(t *testing.T) {
 	assert.Empty(t, session.Cookies, "FindSession(WithProfile(%q)) must not fall back to unselected profile cookies", "default")
 }
 
+func TestFindSessionParityDiscoversValidatedSession(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return requiredKookyCookies(), nil
+	})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method, "FindSession() validation method mismatch")
+		assert.Equal(t, "/ExecutiveSummary", r.URL.Path, "FindSession() validation request path mismatch")
+		assert.Contains(t, r.Header.Get("Cookie"), volumeleaders.SessionCookieName+"=session-id", "FindSession() validation request must include session cookie")
+		assert.Contains(t, r.Header.Get("Cookie"), volumeleaders.FormsAuthCookieName+"=forms-auth", "FindSession() validation request must include forms auth cookie")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<html><body><input name="__RequestVerificationToken" value="test-xsrf-token"></body></html>`))
+	}))
+	t.Cleanup(server.Close)
+
+	session, err := FindSession(context.Background(), WithClientOptions(
+		volumeleaders.WithBaseURL(server.URL),
+		volumeleaders.WithHTTPClient(server.Client()),
+	))
+	require.NoError(t, err, "FindSession() returned unexpected error")
+	assert.Equal(t, "test-xsrf-token", session.XSRFToken, "FindSession() must return fetched XSRF token")
+	assertSessionCookieValues(t, session, map[string]string{
+		volumeleaders.SessionCookieName:             "session-id",
+		volumeleaders.FormsAuthCookieName:           "forms-auth",
+		volumeleaders.RequestVerificationCookieName: "verification",
+	})
+}
+
+func TestFindSessionToleratesPartialBrowserReadErrors(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return kooky.Cookies{
+			browserCookie("firefox", "default", volumeleaders.SessionCookieName, "session-id"),
+			browserCookie("firefox", "default", volumeleaders.FormsAuthCookieName, "forms-auth"),
+			browserCookie("firefox", "default", volumeleaders.RequestVerificationCookieName, "verification"),
+		}, errors.New("chrome cookie store read failed")
+	})
+
+	session, err := FindSession(context.Background(), WithoutValidation())
+	require.NoError(t, err, "FindSession() must tolerate browser read errors when required cookies are found")
+	assertSessionCookieValues(t, session, map[string]string{
+		volumeleaders.SessionCookieName:             "session-id",
+		volumeleaders.FormsAuthCookieName:           "forms-auth",
+		volumeleaders.RequestVerificationCookieName: "verification",
+	})
+}
+
+func TestFindSessionWithUnsupportedBrowserReturnsError(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return kooky.Cookies{
+			browserCookie("chrome", "default", volumeleaders.SessionCookieName, "chrome-session"),
+			browserCookie("chrome", "default", volumeleaders.FormsAuthCookieName, "chrome-auth"),
+			browserCookie("chrome", "default", volumeleaders.RequestVerificationCookieName, "chrome-verification"),
+		}, nil
+	})
+
+	session, err := FindSession(context.Background(), WithBrowser("firefox"), WithoutValidation())
+	require.Error(t, err, "FindSession(WithBrowser(%q)) must fail when selected browser has no cookies", "firefox")
+	assert.Empty(t, session.Cookies, "FindSession(WithBrowser(%q)) must not return cookies from another browser", "firefox")
+	assert.ErrorIs(t, err, ErrBrowserUnavailable, "FindSession(WithBrowser(%q)) error must identify unavailable browser", "firefox")
+	assert.ErrorIs(t, err, ErrRequiredCookieMissing, "FindSession(WithBrowser(%q)) error must identify missing required cookies", "firefox")
+}
+
+func TestFindSessionMissingRequiredCookiesReturnsError(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return kooky.Cookies{
+			browserCookie("firefox", "default", volumeleaders.SessionCookieName, "secret-session-id"),
+			browserCookie("firefox", "default", volumeleaders.RequestVerificationCookieName, "secret-xsrf-token"),
+		}, nil
+	})
+
+	session, err := FindSession(context.Background(), WithoutValidation())
+	require.Error(t, err, "FindSession() must fail when %q is missing", volumeleaders.FormsAuthCookieName)
+	assert.Empty(t, session.Cookies, "FindSession() must not return a partial session when required cookies are missing")
+	assert.ErrorIs(t, err, ErrRequiredCookieMissing, "FindSession() error must identify missing required cookies")
+	assertNoSecretLeakage(t, err, fixtureSecrets)
+}
+
+func TestFindSessionMissingXSRFTokenReturnsError(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return secretKookyCookies(), nil
+	})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/ExecutiveSummary", r.URL.Path, "FindSession() XSRF request path mismatch")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<html><body>credential-bearing-body without token input</body></html>`))
+	}))
+	t.Cleanup(server.Close)
+
+	session, err := FindSession(context.Background(), WithClientOptions(
+		volumeleaders.WithBaseURL(server.URL),
+		volumeleaders.WithHTTPClient(server.Client()),
+	))
+	require.Error(t, err, "FindSession() must fail when validation page lacks XSRF token")
+	assert.Empty(t, session.Cookies, "FindSession() must not return a session when XSRF validation fails")
+	assert.ErrorIs(t, err, volumeleaders.ErrXSRFTokenNotFound, "FindSession() error must preserve missing XSRF token cause")
+	assert.ErrorIs(t, err, ErrValidationFailed, "FindSession() error must identify validation failure")
+	assertNoSecretLeakage(t, err, fixtureSecrets)
+}
+
+func TestFindSessionExpiredSessionReturnsError(t *testing.T) {
+	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
+		return secretKookyCookies(), nil
+	})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/ExecutiveSummary":
+			http.Redirect(w, r, "/Login", http.StatusFound)
+		case "/Login":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write([]byte(`<html><body class="login">credential-bearing-body</body></html>`))
+		default:
+			assert.Failf(t, "FindSession() validation request path mismatch", "path = %q", r.URL.Path)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	session, err := FindSession(context.Background(), WithClientOptions(
+		volumeleaders.WithBaseURL(server.URL),
+		volumeleaders.WithHTTPClient(server.Client()),
+	))
+	require.Error(t, err, "FindSession() must fail when validation redirects to login")
+	assert.Empty(t, session.Cookies, "FindSession() must not return an expired session")
+	assert.ErrorIs(t, err, volumeleaders.ErrSessionExpired, "FindSession() error must identify expired sessions")
+	assert.ErrorIs(t, err, ErrValidationFailed, "FindSession() error must identify validation failure")
+	assertNoSecretLeakage(t, err, fixtureSecrets)
+}
+
 func TestFindSessionValidatesDiscoveredSession(t *testing.T) {
 	stubReadBrowserCookies(t, func(context.Context, ...kooky.Filter) (kooky.Cookies, error) {
 		return requiredKookyCookies(), nil
