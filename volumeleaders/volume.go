@@ -72,114 +72,39 @@ func (c *Client) GetTotalVolumeLimit(
 	return getEndpointLimit(ctx, req, limit, c.GetTotalVolume)
 }
 
-// InstitutionalVolumeColumns returns the DataTables columns used by the
-// institutional volume leaderboard endpoints.
-func InstitutionalVolumeColumns() []DataTablesColumn {
+// volumeColumns builds a column set for volume leaderboard endpoints. All three
+// share the same leading (Ticker, Price, Sector, Industry) and trailing
+// (LastTradeDate) columns; only the three middle metric columns differ.
+func volumeColumns(volume, dollars, rank string) []DataTablesColumn {
 	return []DataTablesColumn{
 		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
 		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
 		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
 		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
 		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{
-			Data:       "TotalInstitutionalVolume",
-			Name:       "TotalInstitutionalVolume",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       "TotalInstitutionalDollars",
-			Name:       "TotalInstitutionalDollars",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       columnTotalInstitutionalDollarsRank,
-			Name:       columnTotalInstitutionalDollarsRank,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
+		{Data: volume, Name: volume, Searchable: true, Orderable: true},
+		{Data: dollars, Name: dollars, Searchable: true, Orderable: true},
+		{Data: rank, Name: rank, Searchable: true, Orderable: true},
+		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
+		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
 	}
+}
+
+// InstitutionalVolumeColumns returns the DataTables columns used by the
+// institutional volume leaderboard endpoints.
+func InstitutionalVolumeColumns() []DataTablesColumn {
+	return volumeColumns("TotalInstitutionalVolume", "TotalInstitutionalDollars", columnTotalInstitutionalDollarsRank)
 }
 
 // AHInstitutionalVolumeColumns returns the DataTables columns used by the
 // after-hours institutional volume leaderboard endpoint.
 func AHInstitutionalVolumeColumns() []DataTablesColumn {
-	return []DataTablesColumn{
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
-		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
-		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{
-			Data:       "AHInstitutionalVolume",
-			Name:       "AHInstitutionalVolume",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       "AHInstitutionalDollars",
-			Name:       "AHInstitutionalDollars",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       "AHInstitutionalDollarsRank",
-			Name:       "AHInstitutionalDollarsRank",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-	}
+	return volumeColumns("AHInstitutionalVolume", "AHInstitutionalDollars", "AHInstitutionalDollarsRank")
 }
 
 // TotalVolumeColumns returns the DataTables columns used by the total volume
 // leaderboard endpoint.
 func TotalVolumeColumns() []DataTablesColumn {
-	return []DataTablesColumn{
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
-		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
-		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{Data: "TotalVolume", Name: "TotalVolume", Searchable: true, Orderable: true},
-		{Data: "TotalDollars", Name: "TotalDollars", Searchable: true, Orderable: true},
-		{Data: "TotalDollarsRank", Name: "TotalDollarsRank", Searchable: true, Orderable: true},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-	}
+	return volumeColumns("TotalVolume", "TotalDollars", "TotalDollarsRank")
 }
 
