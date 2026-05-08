@@ -34,6 +34,93 @@ if err != nil {
 
 This path reads local browser cookie stores with `github.com/browserutils/kooky`, fetches the current XSRF token from `/ExecutiveSummary`, and builds a `Client`. It is convenient for desktop automation, but service and container callers should prefer explicit sessions so browser-store access stays outside the core API layer. The root `volumeleaders` package does not import browser-store, SQLite, or desktop keyring packages.
 
+## Browser auth session discovery
+
+`browserauth.FindSession` is the preferred entry point for desktop automation where the user is already logged in to VolumeLeaders in a supported local browser. It reads cookies from local browser stores, validates the session by fetching the current XSRF token, and returns a `volumeleaders.Session` ready for `NewClient`.
+
+The root `volumeleaders` package does not import browser-store, SQLite, or desktop keyring packages. Browser-store access stays isolated to the `browserauth` subpackage.
+
+### Default discovery
+
+```go
+import (
+    "github.com/major/volumeleaders-go/volumeleaders"
+    "github.com/major/volumeleaders-go/volumeleaders/browserauth"
+)
+
+session, err := browserauth.FindSession(ctx)
+if err != nil {
+    return err
+}
+client, err := volumeleaders.NewClient(session)
+if err != nil {
+    return err
+}
+```
+
+### Explicit browser selection
+
+When multiple supported browsers are installed, pass `WithBrowser` to restrict discovery to one. `FindSession` returns `ErrBrowserUnavailable` if that browser has no matching VolumeLeaders cookies.
+
+Browser and profile matching is exact and case-sensitive. Pass the browser name and profile name reported by the browser store metadata; the library does not lowercase, normalize, alias, or fuzzy-match these values. Common browser names from the supported browser backends are `chrome`, `chromium`, `firefox`, `edge`, `brave`, `opera`, and `safari`. Common profile names are browser-specific: Chrome and Edge usually use `Default`, `Profile 1`, or `Profile 2`; Firefox profiles are commonly `default`, `default-release`, or the configured profile directory name. If an explicit selection fails, retry without the option or inspect the local browser profile names before prompting the user.
+
+```go
+session, err := browserauth.FindSession(ctx, browserauth.WithBrowser("firefox"))
+```
+
+Combine with `WithProfile` to target a specific browser profile:
+
+```go
+session, err := browserauth.FindSession(ctx,
+    browserauth.WithBrowser("chrome"),
+    browserauth.WithProfile("Default"),
+)
+```
+
+### Skip validation
+
+`WithoutValidation` skips the XSRF token fetch. The returned `Session` contains the discovered browser cookies but has an empty `XSRFToken` field. Use this when the caller will supply the token separately or when the validation request is not needed.
+
+```go
+session, err := browserauth.FindSession(ctx, browserauth.WithoutValidation())
+// session.XSRFToken == ""
+```
+
+Authenticated DataTables endpoints require a valid XSRF token. Callers using `WithoutValidation` must populate `XSRFToken` before making those requests.
+
+### Error sentinels
+
+`FindSession` returns typed errors that callers can match with `errors.Is` and `errors.As`:
+
+- `browserauth.ErrBrowserUnavailable` - the named browser has no matching VolumeLeaders cookies. A browser with partial VolumeLeaders cookies returns `ErrRequiredCookieMissing` instead.
+- `browserauth.ErrProfileUnavailable` - the named profile has no matching VolumeLeaders cookies. A profile with partial VolumeLeaders cookies returns `ErrRequiredCookieMissing` instead.
+- `browserauth.ErrRequiredCookieMissing` - browser cookies were found, but required session or forms-auth cookies are absent.
+- `browserauth.ErrRequestVerificationTokenMissing` - validation reached VolumeLeaders, but the request verification token was not found in the validation page.
+- `browserauth.ErrValidationFailed` - validation failed while fetching the request verification token.
+- `*browserauth.ValidationError` - wraps validation failures. Use `errors.As` to inspect the underlying validation cause.
+- `volumeleaders.ErrSessionExpired` - the browser cookies were present, but VolumeLeaders redirected or returned a login page during validation.
+- `volumeleaders.ErrXSRFTokenNotFound` - the validation response did not contain the expected request verification token.
+- `*volumeleaders.StatusError` and `*volumeleaders.ContentError` - validation reached VolumeLeaders but received an unexpected HTTP status or content response.
+
+```go
+var ve *browserauth.ValidationError
+if errors.As(err, &ve) {
+    // ve.Err holds the underlying fetch failure.
+    return fmt.Errorf("session validation failed: %w", ve.Err)
+}
+if errors.Is(err, browserauth.ErrRequestVerificationTokenMissing) {
+    return fmt.Errorf("VolumeLeaders did not return a request verification token: %w", err)
+}
+if errors.Is(err, volumeleaders.ErrSessionExpired) {
+    return fmt.Errorf("VolumeLeaders browser session expired: %w", err)
+}
+if errors.Is(err, browserauth.ErrBrowserUnavailable) {
+    return fmt.Errorf("no VolumeLeaders cookies in the requested browser: %w", err)
+}
+```
+
+The library keeps browserauth errors factual and safe to display. It does not include cookie values, session IDs, XSRF tokens, credential-bearing response bodies, or local browser profile paths in error messages. CLI callers should own retry policy, cache invalidation, exit codes, and user-facing recovery text.
+
 ## Trades
 
 `ListTrades` wraps `/Trades/GetTrades` with a typed query so callers do not need to know DataTables field names or VolumeLeaders form keys.

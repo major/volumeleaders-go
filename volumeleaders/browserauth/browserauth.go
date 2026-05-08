@@ -47,26 +47,82 @@ func Session(ctx context.Context, opts ...volumeleaders.Option) (volumeleaders.S
 	return volumeleaders.SessionFromCookies(cookies, token, nil), nil
 }
 
+// FindSession discovers a VolumeLeaders session from local browser cookies.
+//
+// By default, FindSession reads valid VolumeLeaders cookies from supported local
+// browser stores and validates the session by fetching the ASP.NET request
+// verification token. Use WithoutValidation when callers only need the browser
+// cookies and can tolerate an empty XSRF token.
+func FindSession(ctx context.Context, opts ...Option) (volumeleaders.Session, error) {
+	cfg := findConfig{}
+	for _, opt := range opts {
+		if opt != nil {
+			opt.apply(&cfg)
+		}
+	}
+
+	browserCookies, err := readBrowserCookies(
+		ctx,
+		kooky.Valid,
+		kooky.DomainHasSuffix(volumeleaders.CookieDomain),
+	)
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return volumeleaders.Session{}, ctxErr
+	}
+	if err != nil && len(browserCookies) == 0 {
+		return volumeleaders.Session{}, fmt.Errorf(
+			"%w: read browser cookies",
+			volumeleaders.ErrBrowserCookiesUnavailable,
+		)
+	}
+
+	selected := volumeLeadersCookies(filterBrowserCookies(browserCookies, cfg))
+	if missing := volumeleaders.MissingCookieFields(selected); len(missing) != 0 {
+		return volumeleaders.Session{}, missingCookieError(cfg, selected, missing)
+	}
+
+	if cfg.skipValidation {
+		return volumeleaders.SessionFromCookies(selected, "", nil), nil
+	}
+
+	session := volumeleaders.SessionFromCookies(selected, "", nil)
+	token, err := volumeleaders.FetchXSRFToken(ctx, session, cfg.clientOpts...)
+	if err != nil {
+		if errors.Is(err, volumeleaders.ErrXSRFTokenNotFound) {
+			return volumeleaders.Session{}, &ValidationError{
+				Err: errors.Join(ErrRequestVerificationTokenMissing, err),
+			}
+		}
+		return volumeleaders.Session{}, &ValidationError{Err: err}
+	}
+	return volumeleaders.SessionFromCookies(selected, token, nil), nil
+}
+
 // ExtractCookies reads VolumeLeaders authentication cookies from local browser
 // stores.
 //
 // Browser store read errors are tolerated as long as the required cookies are
 // found in at least one supported browser.
 func ExtractCookies(ctx context.Context) ([]*http.Cookie, error) {
-	validCookies, validErr := readBrowserCookies(ctx, kooky.Valid, kooky.DomainHasSuffix(volumeleaders.CookieDomain))
+	validCookies, validErr := readBrowserCookies(
+		ctx,
+		kooky.Valid,
+		kooky.DomainHasSuffix(volumeleaders.CookieDomain),
+	)
 	selected := volumeLeadersCookies(validCookies)
 	if len(volumeleaders.MissingCookieFields(selected)) == 0 {
 		return selected, nil
 	}
+	_ = validErr // Raw browser-store errors can include local profile paths; report only safe diagnostics.
 
 	allCookies, allErr := readBrowserCookies(ctx, kooky.DomainHasSuffix(volumeleaders.CookieDomain))
+	_ = allErr // Raw browser-store errors can include local profile paths; report only safe diagnostics.
 	return nil, fmt.Errorf(
-		"%w: missing %s; valid cookies found: %d; browser stores with matching cookies: %d; browser read errors: %w",
+		"%w: missing %s; valid cookies found: %d; browser stores with matching cookies: %d",
 		volumeleaders.ErrBrowserCookiesUnavailable,
 		strings.Join(volumeleaders.MissingCookieFields(selected), ", "),
 		len(validCookies),
 		browserStoreCount(allCookies),
-		errors.Join(validErr, allErr),
 	)
 }
 
@@ -85,6 +141,39 @@ func volumeLeadersCookies(cookies kooky.Cookies) []*http.Cookie {
 		}
 	}
 	return selected
+}
+
+func filterBrowserCookies(cookies kooky.Cookies, cfg findConfig) kooky.Cookies {
+	if cfg.browser == "" && cfg.profile == "" {
+		return cookies
+	}
+
+	filtered := make(kooky.Cookies, 0, len(cookies))
+	for _, cookie := range cookies {
+		if cookie == nil || cookie.Browser == nil {
+			continue
+		}
+		if cfg.browser != "" && cookie.Browser.Browser() != cfg.browser {
+			continue
+		}
+		if cfg.profile != "" && cookie.Browser.Profile() != cfg.profile {
+			continue
+		}
+		filtered = append(filtered, cookie)
+	}
+	return filtered
+}
+
+func missingCookieError(cfg findConfig, selected []*http.Cookie, missing []string) error {
+	var errs []error
+	if len(selected) == 0 && cfg.browser != "" {
+		errs = append(errs, ErrBrowserUnavailable)
+	}
+	if len(selected) == 0 && cfg.profile != "" {
+		errs = append(errs, ErrProfileUnavailable)
+	}
+	errs = append(errs, volumeleaders.ErrBrowserCookiesUnavailable, ErrRequiredCookieMissing)
+	return fmt.Errorf("%w: missing %s", errors.Join(errs...), strings.Join(missing, ", "))
 }
 
 func browserStoreCount(cookies kooky.Cookies) int {
