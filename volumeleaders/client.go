@@ -215,6 +215,42 @@ func redirectSuccess(req *http.Request, resp *http.Response, result any, opts po
 	return false, nil
 }
 
+// getHTML sends an authenticated GET request and returns the response body
+// after validating the session and status code.
+func (c *Client) getHTML(ctx context.Context, path string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.resolve(path), nil)
+	if err != nil {
+		return nil, fmt.Errorf("create GET request: %w", err)
+	}
+	c.setHeaders(req)
+	req.Header.Set("Accept", navigationAccept)
+	for _, cookie := range c.session.Cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GET request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if redirectedToLogin(resp) {
+		return nil, sessionExpiredError{redirectPath: safeResponsePath(resp)}
+	}
+
+	body, err := c.readBody(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response body: %w", err)
+	}
+	if looksLikeLoginPage(resp, body) {
+		return nil, sessionExpiredError{redirectPath: safeResponsePath(resp)}
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, statusError(resp, body)
+	}
+	return body, nil
+}
+
 func (c *Client) setHeaders(req *http.Request) {
 	copyHeaderInto(req.Header, c.defaultHeaders)
 	copyHeaderInto(req.Header, c.session.Headers)

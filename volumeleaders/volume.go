@@ -75,15 +75,17 @@ func (c *Client) GetTotalVolumeLimit(
 }
 
 // volumeColumns builds a column set for volume leaderboard endpoints. All three
-// share the same leading (Ticker, Price, Sector, Industry) and trailing
-// (LastTradeDate) columns; only the three middle metric columns differ.
+// share the same leading (Ticker x2, Price, Sector, Industry) and trailing
+// (LastTradeDate x2) columns; only the three middle metric columns differ.
+// The duplicated Ticker and LastTradeDate entries match the browser form that
+// VolumeLeaders expects.
 func volumeColumns(volume, dollars, rank string) []DataTablesColumn {
 	return []DataTablesColumn{
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
-		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
-		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
+		colTicker(),
+		colTicker(),
+		colPrice(),
+		colSector(),
+		colIndustry(),
 		{Data: volume, Name: volume, Searchable: true, Orderable: true},
 		{Data: dollars, Name: dollars, Searchable: true, Orderable: true},
 		{Data: rank, Name: rank, Searchable: true, Orderable: true},

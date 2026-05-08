@@ -113,45 +113,20 @@ func (c *Client) GetTradeClusterBombsLimit(
 func TradeClustersColumns() []DataTablesColumn {
 	return []DataTablesColumn{
 		{Data: columnMinFullTimeString24, Name: "", Searchable: true, Orderable: false},
-		{
-			Data:       columnMinFullTimeString24,
-			Name:       columnMinFullTimeString24,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
+		{Data: columnMinFullTimeString24, Name: columnMinFullTimeString24, Searchable: true, Orderable: true},
+		colTicker(),
 		{Data: columnTradeCount, Name: columnTrades, Searchable: true, Orderable: true},
-		{Data: columnCurrent, Name: columnCurrent, Searchable: true, Orderable: false},
+		colCurrent(),
 		{Data: "Cluster", Name: "Cluster", Searchable: true, Orderable: false},
-		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
-		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{Data: tradeColumnVolume, Name: columnShName, Searchable: true, Orderable: true},
-		{Data: columnDollars, Name: columnDollarsName, Searchable: true, Orderable: true},
-		{
-			Data:       columnDollarsMultiplier,
-			Name:       columnRelativeSizeName,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       columnCumulativeDistribution,
-			Name:       columnPercentName,
-			Searchable: true,
-			Orderable:  true,
-		},
+		colSector(),
+		colIndustry(),
+		colShares(),
+		colDollars(),
+		colMultiplier(),
+		colCumulativePct(),
 		{Data: columnTradeClusterRank, Name: columnRankName, Searchable: true, Orderable: true},
-		{
-			Data:       columnLastComparibleTradeClusterDate,
-			Name:       columnLastDateName,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       columnLastComparibleTradeClusterDate,
-			Name:       columnLastDateName,
-			Searchable: true,
-			Orderable:  false,
-		},
+		{Data: columnLastComparibleTradeClusterDate, Name: columnLastDateName, Searchable: true, Orderable: true},
+		{Data: columnLastComparibleTradeClusterDate, Name: columnLastDateName, Searchable: true, Orderable: false},
 	}
 }
 
@@ -159,42 +134,17 @@ func TradeClustersColumns() []DataTablesColumn {
 // trade cluster bombs table.
 func TradeClusterBombsColumns() []DataTablesColumn {
 	return []DataTablesColumn{
-		{
-			Data:       columnMinFullTimeString24,
-			Name:       columnMinFullTimeString24,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
+		{Data: columnMinFullTimeString24, Name: columnMinFullTimeString24, Searchable: true, Orderable: true},
+		colTicker(),
 		{Data: columnTradeCount, Name: columnTrades, Searchable: true, Orderable: true},
-		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
-		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{Data: tradeColumnVolume, Name: columnShName, Searchable: true, Orderable: true},
-		{Data: columnDollars, Name: columnDollarsName, Searchable: true, Orderable: true},
-		{
-			Data:       columnDollarsMultiplier,
-			Name:       columnRelativeSizeName,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       columnCumulativeDistribution,
-			Name:       columnPercentName,
-			Searchable: true,
-			Orderable:  true,
-		},
+		colSector(),
+		colIndustry(),
+		colShares(),
+		colDollars(),
+		colMultiplier(),
+		colCumulativePct(),
 		{Data: columnTradeClusterBombRank, Name: columnRankName, Searchable: true, Orderable: true},
-		{
-			Data:       columnLastComparableTradeClusterBombDate,
-			Name:       columnLastDateName,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       columnLastComparableTradeClusterBombDate,
-			Name:       columnLastDateName,
-			Searchable: true,
-			Orderable:  false,
-		},
+		{Data: columnLastComparableTradeClusterBombDate, Name: columnLastDateName, Searchable: true, Orderable: true},
+		{Data: columnLastComparableTradeClusterBombDate, Name: columnLastDateName, Searchable: true, Orderable: false},
 	}
 }

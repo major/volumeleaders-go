@@ -1,9 +1,6 @@
 package volumeleaders
 
-import (
-	"context"
-	"net/url"
-)
+import "context"
 
 // Browser endpoint paths for alert configuration APIs captured from VolumeLeaders.
 const (
@@ -26,13 +23,9 @@ type TradeAlertsRequest = EndpointRequest
 // filters for /TradeClusterAlerts/GetTradeClusterAlerts.
 type TradeClusterAlertsRequest = EndpointRequest
 
-// SaveAlertConfigRequest contains the multipart form fields submitted to
-// /AlertConfig when creating or editing an alert.
-type SaveAlertConfigRequest struct {
-	// Fields is a low-level captured-form escape hatch. Callers must provide the
-	// exact browser field names and values accepted by VolumeLeaders.
-	Fields url.Values
-}
+// SaveAlertConfigRequest is the multipart form payload for alert configuration
+// create/edit requests.
+type SaveAlertConfigRequest = SaveConfigRequest
 
 // DeleteAlertConfigRequest contains the JSON payload for deleting an alert.
 type DeleteAlertConfigRequest struct {
@@ -186,7 +179,7 @@ func (c *Client) GetTradeClusterAlertsLimit(
 
 // SaveAlertConfig posts a multipart create or edit request to /AlertConfig.
 func (c *Client) SaveAlertConfig(ctx context.Context, req SaveAlertConfigRequest) error {
-	return c.postMultipartForm(ctx, AlertConfigPath, mergeValues(req.Fields, nil), nil)
+	return c.saveConfig(ctx, AlertConfigPath, req.Fields)
 }
 
 // DeleteAlertConfig posts a JSON delete request to

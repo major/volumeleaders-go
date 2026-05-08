@@ -46,6 +46,60 @@ const (
 	columnTotalInstitutionalDollarsRank      = "TotalInstitutionalDollarsRank"
 )
 
+// SaveConfigRequest contains the multipart form fields submitted when creating
+// or editing a VolumeLeaders configuration (alert or watchlist).
+type SaveConfigRequest struct {
+	// Fields is a low-level captured-form escape hatch. Callers must provide the
+	// exact browser field names and values accepted by VolumeLeaders.
+	Fields url.Values
+}
+
+func colTicker() DataTablesColumn {
+	return DataTablesColumn{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true}
+}
+
+func colSector() DataTablesColumn {
+	return DataTablesColumn{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true}
+}
+
+func colIndustry() DataTablesColumn {
+	return DataTablesColumn{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true}
+}
+
+func colPrice() DataTablesColumn {
+	return DataTablesColumn{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true}
+}
+
+func colDollars() DataTablesColumn {
+	return DataTablesColumn{Data: columnDollars, Name: columnDollarsName, Searchable: true, Orderable: true}
+}
+
+func colShares() DataTablesColumn {
+	return DataTablesColumn{Data: tradeColumnVolume, Name: columnShName, Searchable: true, Orderable: true}
+}
+
+func colMultiplier() DataTablesColumn {
+	return DataTablesColumn{
+		Data: columnDollarsMultiplier, Name: columnRelativeSizeName,
+		Searchable: true, Orderable: true,
+	}
+}
+
+func colCumulativePct() DataTablesColumn {
+	return DataTablesColumn{
+		Data: columnCumulativeDistribution, Name: columnPercentName,
+		Searchable: true, Orderable: true,
+	}
+}
+
+func colCurrent() DataTablesColumn {
+	return DataTablesColumn{Data: columnCurrent, Name: columnCurrent, Searchable: true, Orderable: false}
+}
+
+func (c *Client) saveConfig(ctx context.Context, path string, fields url.Values) error {
+	return c.postMultipartForm(ctx, path, mergeValues(fields, nil), nil)
+}
+
 func (c *Client) postDataTables(
 	ctx context.Context,
 	path string,
