@@ -68,7 +68,11 @@ func TestFetchXSRFTokenReportsSessionExpiredRedirect(t *testing.T) {
 func TestFetchXSRFTokenReportsSessionExpiredLoginPage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(`<html><title>Login</title><body>login required</body></html>`))
+		_, _ = w.Write([]byte(
+			`<html><title>Login</title><body>` +
+				`<form action="/Login/Login"><input type="password" name="Password"></form>` +
+				`</body></html>`,
+		))
 	}))
 	t.Cleanup(server.Close)
 
@@ -76,6 +80,28 @@ func TestFetchXSRFTokenReportsSessionExpiredLoginPage(t *testing.T) {
 
 	require.Error(t, err, "FetchXSRFToken() login page")
 	assert.True(t, IsSessionExpired(err), "IsSessionExpired(FetchXSRFToken login page error)")
+}
+
+func TestFetchXSRFTokenIgnoresIncidentalLoginString(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		// Authenticated page containing "Login" in a JS conditional (not a login form).
+		_, _ = w.Write([]byte(
+			`<html><body>` +
+				`<input name="__RequestVerificationToken" type="hidden" value="xsrf-ok">` +
+				`<script>if ("ExecutiveSummary" != "Login") { init(); }</script>` +
+				`</body></html>`,
+		))
+	}))
+	t.Cleanup(server.Close)
+
+	token, err := FetchXSRFToken(
+		context.Background(), Session{},
+		WithBaseURL(server.URL), WithHTTPClient(server.Client()),
+	)
+
+	require.NoError(t, err, "FetchXSRFToken() with incidental login string")
+	assert.Equal(t, "xsrf-ok", token, "FetchXSRFToken() token")
 }
 
 func TestParseXSRFTokenHandlesAttributeOrder(t *testing.T) {

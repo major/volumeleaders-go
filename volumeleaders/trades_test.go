@@ -156,7 +156,11 @@ func TestGetTradesReportsSessionExpiredRedirect(t *testing.T) {
 func TestGetTradesReportsSessionExpiredLoginPage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(`<html><body>login required</body></html>`))
+		_, _ = w.Write([]byte(
+			`<html><body>` +
+				`<form action="/Login/Login"><input type="password" name="Password"></form>` +
+				`</body></html>`,
+		))
 	}))
 	t.Cleanup(server.Close)
 
