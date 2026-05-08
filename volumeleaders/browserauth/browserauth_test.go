@@ -867,7 +867,11 @@ func TestFindSessionRedactsSessionExpiredSecrets(t *testing.T) {
 	// expired detection. The response body contains fixture secrets.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(`<html><body class="login">credential-bearing-body</body></html>`))
+		_, _ = w.Write([]byte(
+			`<html><body class="login">` +
+				`<form action="/Login/Login"><input type="password" name="Password"></form>` +
+				`credential-bearing-body</body></html>`,
+		))
 	}))
 	t.Cleanup(server.Close)
 

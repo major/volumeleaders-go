@@ -21,8 +21,9 @@ const (
 )
 
 var (
-	xsrfInputPattern = regexp.MustCompile(`(?is)<input\b[^>]*\bname=["']__RequestVerificationToken["'][^>]*>`)
-	xsrfValuePattern = regexp.MustCompile(`(?is)\bvalue=["']([^"']+)["']`)
+	xsrfInputPattern          = regexp.MustCompile(`(?is)<input\b[^>]*\bname=["']__RequestVerificationToken["'][^>]*>`)
+	xsrfValuePattern          = regexp.MustCompile(`(?is)\bvalue=["']([^"']+)["']`)
+	loginPasswordInputPattern = regexp.MustCompile(`(?is)<input\b[^>]*\btype\s*=\s*["']?password["']?`)
 )
 
 func requiredCookieNames() []string {
@@ -95,8 +96,7 @@ func looksLikeLoginPage(resp *http.Response, body []byte) bool {
 	if resp == nil || !strings.Contains(strings.ToLower(resp.Header.Get("Content-Type")), "text/html") {
 		return false
 	}
-	lowerBody := strings.ToLower(string(body))
-	return strings.Contains(lowerBody, "<html") && strings.Contains(lowerBody, "login")
+	return loginPasswordInputPattern.Match(body)
 }
 
 func safeResponsePath(resp *http.Response) string {
