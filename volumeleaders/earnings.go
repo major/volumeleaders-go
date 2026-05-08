@@ -16,16 +16,15 @@ type EarningsRequest struct {
 }
 
 // Earning represents a VolumeLeaders earnings row.
-//
-// The available earnings captures included the request columns but no
-// successful response body, so this model follows the captured DataTables
-// column names until a successful earnings payload can confirm extra fields.
 type Earning struct {
 	Date                  AspNetDate `json:"Date"`
+	EarningsDate          AspNetDate `json:"EarningsDate"`
+	Name                  string     `json:"Name"`
 	Ticker                string     `json:"Ticker"`
 	Current               float64    `json:"Current"`
-	Sector                string     `json:"Sector"`
-	Industry              string     `json:"Industry"`
+	Sector                *string    `json:"Sector"`
+	Industry              *string    `json:"Industry"`
+	AfterMarketClose      bool       `json:"AfterMarketClose"`
 	TradeCount            int        `json:"TradeCount"`
 	TradeClusterCount     int        `json:"TradeClusterCount"`
 	TradeClusterBombCount int        `json:"TradeClusterBombCount"`
