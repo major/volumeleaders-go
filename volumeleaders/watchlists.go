@@ -147,18 +147,7 @@ func (c *Client) GetWatchLists(
 	ctx context.Context,
 	req WatchListsRequest,
 ) (*DataTablesResponse[WatchListConfig], error) {
-	var result DataTablesResponse[WatchListConfig]
-	if err := c.postDataTables(
-		ctx,
-		WatchListConfigsGetWatchListsPath,
-		req.DataTables,
-		req.Filters,
-		WatchListsColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[WatchListConfig](c, ctx, WatchListConfigsGetWatchListsPath, req, WatchListsColumns())
 }
 
 // GetWatchListTickers posts a typed DataTables request to
@@ -167,18 +156,7 @@ func (c *Client) GetWatchListTickers(
 	ctx context.Context,
 	req WatchListTickersRequest,
 ) (*DataTablesResponse[WatchListTicker], error) {
-	var result DataTablesResponse[WatchListTicker]
-	if err := c.postDataTables(
-		ctx,
-		WatchListsGetWatchListTickersPath,
-		req.DataTables,
-		req.Filters,
-		WatchListTickersColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[WatchListTicker](c, ctx, WatchListsGetWatchListTickersPath, req, WatchListTickersColumns())
 }
 
 // SaveWatchListConfig posts a multipart create or edit request to

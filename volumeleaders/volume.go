@@ -19,12 +19,7 @@ func (c *Client) GetInstitutionalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return c.getVolume(
-		ctx,
-		InstitutionalVolumeGetInstitutionalVolumePath,
-		req,
-		InstitutionalVolumeColumns(),
-	)
+	return getEndpoint[Trade](c, ctx, InstitutionalVolumeGetInstitutionalVolumePath, req, InstitutionalVolumeColumns())
 }
 
 // GetAHInstitutionalVolume posts a typed DataTables request to
@@ -33,12 +28,7 @@ func (c *Client) GetAHInstitutionalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return c.getVolume(
-		ctx,
-		AHInstitutionalVolumeGetAHInstitutionalVolumePath,
-		req,
-		AHInstitutionalVolumeColumns(),
-	)
+	return getEndpoint[Trade](c, ctx, AHInstitutionalVolumeGetAHInstitutionalVolumePath, req, AHInstitutionalVolumeColumns())
 }
 
 // GetTotalVolume posts a typed DataTables request to
@@ -47,7 +37,7 @@ func (c *Client) GetTotalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return c.getVolume(ctx, TotalVolumeGetTotalVolumePath, req, TotalVolumeColumns())
+	return getEndpoint[Trade](c, ctx, TotalVolumeGetTotalVolumePath, req, TotalVolumeColumns())
 }
 
 // GetInstitutionalVolumeLimit fetches up to limit trades by paging through
@@ -58,15 +48,7 @@ func (c *Client) GetInstitutionalVolumeLimit(
 	req VolumeRequest,
 	limit int,
 ) ([]Trade, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
-			req.DataTables = dt
-			return c.GetInstitutionalVolume(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetInstitutionalVolume)
 }
 
 // GetAHInstitutionalVolumeLimit fetches up to limit trades by paging through
@@ -77,15 +59,7 @@ func (c *Client) GetAHInstitutionalVolumeLimit(
 	req VolumeRequest,
 	limit int,
 ) ([]Trade, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
-			req.DataTables = dt
-			return c.GetAHInstitutionalVolume(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetAHInstitutionalVolume)
 }
 
 // GetTotalVolumeLimit fetches up to limit trades by paging through
@@ -95,15 +69,7 @@ func (c *Client) GetTotalVolumeLimit(
 	req VolumeRequest,
 	limit int,
 ) ([]Trade, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
-			req.DataTables = dt
-			return c.GetTotalVolume(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetTotalVolume)
 }
 
 // InstitutionalVolumeColumns returns the DataTables columns used by the
@@ -217,15 +183,3 @@ func TotalVolumeColumns() []DataTablesColumn {
 	}
 }
 
-func (c *Client) getVolume(
-	ctx context.Context,
-	path string,
-	req VolumeRequest,
-	columns []DataTablesColumn,
-) (*DataTablesResponse[Trade], error) {
-	var result DataTablesResponse[Trade]
-	if err := c.postDataTables(ctx, path, req.DataTables, req.Filters, columns, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}

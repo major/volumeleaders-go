@@ -95,18 +95,7 @@ func (c *Client) GetTradeClusters(
 	ctx context.Context,
 	req TradeClustersRequest,
 ) (*DataTablesResponse[TradeCluster], error) {
-	var result DataTablesResponse[TradeCluster]
-	if err := c.postDataTables(
-		ctx,
-		TradeClustersGetTradeClustersPath,
-		req.DataTables,
-		req.Filters,
-		TradeClustersColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[TradeCluster](c, ctx, TradeClustersGetTradeClustersPath, req, TradeClustersColumns())
 }
 
 // GetTradeClusterBombs posts a typed DataTables request to
@@ -115,18 +104,7 @@ func (c *Client) GetTradeClusterBombs(
 	ctx context.Context,
 	req TradeClusterBombsRequest,
 ) (*DataTablesResponse[TradeClusterBomb], error) {
-	var result DataTablesResponse[TradeClusterBomb]
-	if err := c.postDataTables(
-		ctx,
-		TradeClusterBombsGetTradeClusterBombsPath,
-		req.DataTables,
-		req.Filters,
-		TradeClusterBombsColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[TradeClusterBomb](c, ctx, TradeClusterBombsGetTradeClusterBombsPath, req, TradeClusterBombsColumns())
 }
 
 // GetTradeClustersLimit fetches up to limit trade clusters by paging through
@@ -136,15 +114,7 @@ func (c *Client) GetTradeClustersLimit(
 	req TradeClustersRequest,
 	limit int,
 ) ([]TradeCluster, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[TradeCluster], error) {
-			req.DataTables = dt
-			return c.GetTradeClusters(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetTradeClusters)
 }
 
 // GetTradeClusterBombsLimit fetches up to limit trade cluster bombs by paging
@@ -155,15 +125,7 @@ func (c *Client) GetTradeClusterBombsLimit(
 	req TradeClusterBombsRequest,
 	limit int,
 ) ([]TradeClusterBomb, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[TradeClusterBomb], error) {
-			req.DataTables = dt
-			return c.GetTradeClusterBombs(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetTradeClusterBombs)
 }
 
 // TradeClustersColumns returns the DataTables columns captured from the trade

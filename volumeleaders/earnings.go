@@ -30,18 +30,7 @@ func (c *Client) GetEarnings(
 	ctx context.Context,
 	req EarningsRequest,
 ) (*DataTablesResponse[Earning], error) {
-	var result DataTablesResponse[Earning]
-	if err := c.postDataTables(
-		ctx,
-		EarningsGetEarningsPath,
-		req.DataTables,
-		req.Filters,
-		EarningsColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[Earning](c, ctx, EarningsGetEarningsPath, req, EarningsColumns())
 }
 
 // GetEarningsLimit fetches up to limit earnings by paging through GetEarnings.
@@ -51,15 +40,7 @@ func (c *Client) GetEarningsLimit(
 	req EarningsRequest,
 	limit int,
 ) ([]Earning, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Earning], error) {
-			req.DataTables = dt
-			return c.GetEarnings(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetEarnings)
 }
 
 // EarningsColumns returns the DataTables columns captured from the earnings

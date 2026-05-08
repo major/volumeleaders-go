@@ -59,18 +59,7 @@ func (c *Client) GetWelcomeTrades(
 	ctx context.Context,
 	req WelcomeTradesRequest,
 ) (*DataTablesResponse[Trade], error) {
-	var result DataTablesResponse[Trade]
-	if err := c.postDataTables(
-		ctx,
-		ExecutiveSummaryGetWelcomeTradesPath,
-		req.DataTables,
-		req.Filters,
-		WelcomeTradesColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[Trade](c, ctx, ExecutiveSummaryGetWelcomeTradesPath, req, WelcomeTradesColumns())
 }
 
 // GetWelcomeTradeClusters posts a typed DataTables request to
@@ -79,18 +68,7 @@ func (c *Client) GetWelcomeTradeClusters(
 	ctx context.Context,
 	req WelcomeTradeClustersRequest,
 ) (*DataTablesResponse[TradeCluster], error) {
-	var result DataTablesResponse[TradeCluster]
-	if err := c.postDataTables(
-		ctx,
-		ExecutiveSummaryGetWelcomeTradeClustersPath,
-		req.DataTables,
-		req.Filters,
-		WelcomeTradeClustersColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[TradeCluster](c, ctx, ExecutiveSummaryGetWelcomeTradeClustersPath, req, WelcomeTradeClustersColumns())
 }
 
 // GetAllSnapshots posts a JSON null request to /Trades/GetAllSnapshots and

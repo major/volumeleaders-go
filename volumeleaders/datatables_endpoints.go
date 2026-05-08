@@ -60,3 +60,38 @@ func (c *Client) postDataTables(
 	req.Extra = mergeValues(req.Extra, filters)
 	return c.postForm(ctx, path, EncodeDataTablesRequest(req).Encode(), result)
 }
+
+// getEndpoint posts a typed DataTables request and decodes the response into a
+// DataTablesResponse[T]. Every Get* endpoint method delegates here.
+func getEndpoint[T any](
+	c *Client,
+	ctx context.Context,
+	path string,
+	req EndpointRequest,
+	columns []DataTablesColumn,
+) (*DataTablesResponse[T], error) {
+	var result DataTablesResponse[T]
+	if err := c.postDataTables(ctx, path, req.DataTables, req.Filters, columns, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// getEndpointLimit pages through a Get* endpoint to collect up to limit
+// records. A zero or negative limit fetches all available records.
+func getEndpointLimit[T any](
+	ctx context.Context,
+	req EndpointRequest,
+	limit int,
+	fetch func(context.Context, EndpointRequest) (*DataTablesResponse[T], error),
+) ([]T, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[T], error) {
+			req.DataTables = dt
+			return fetch(ctx, req)
+		},
+	)
+}

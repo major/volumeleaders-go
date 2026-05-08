@@ -47,7 +47,7 @@ func (c *Client) GetTradeLevels(
 	ctx context.Context,
 	req TradeLevelsRequest,
 ) (*DataTablesResponse[TradeLevel], error) {
-	return c.getTradeLevels(ctx, TradeLevelsGetTradeLevelsPath, req)
+	return getEndpoint[TradeLevel](c, ctx, TradeLevelsGetTradeLevelsPath, req, TradeLevelsColumns())
 }
 
 // GetChartTradeLevels posts a typed DataTables request to
@@ -56,7 +56,7 @@ func (c *Client) GetChartTradeLevels(
 	ctx context.Context,
 	req TradeLevelsRequest,
 ) (*DataTablesResponse[TradeLevel], error) {
-	return c.getTradeLevels(ctx, ChartGetTradeLevelsPath, req)
+	return getEndpoint[TradeLevel](c, ctx, ChartGetTradeLevelsPath, req, TradeLevelsColumns())
 }
 
 // GetChart0TradeLevels posts a typed DataTables request to
@@ -65,26 +65,7 @@ func (c *Client) GetChart0TradeLevels(
 	ctx context.Context,
 	req TradeLevelsRequest,
 ) (*DataTablesResponse[TradeLevel], error) {
-	return c.getTradeLevels(ctx, Chart0GetTradeLevelsPath, req)
-}
-
-func (c *Client) getTradeLevels(
-	ctx context.Context,
-	path string,
-	req TradeLevelsRequest,
-) (*DataTablesResponse[TradeLevel], error) {
-	var result DataTablesResponse[TradeLevel]
-	if err := c.postDataTables(
-		ctx,
-		path,
-		req.DataTables,
-		req.Filters,
-		TradeLevelsColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[TradeLevel](c, ctx, Chart0GetTradeLevelsPath, req, TradeLevelsColumns())
 }
 
 // GetTradeLevelTouches posts a typed DataTables request to
@@ -93,18 +74,7 @@ func (c *Client) GetTradeLevelTouches(
 	ctx context.Context,
 	req TradeLevelTouchesRequest,
 ) (*DataTablesResponse[TradeLevel], error) {
-	var result DataTablesResponse[TradeLevel]
-	if err := c.postDataTables(
-		ctx,
-		TradeLevelTouchesGetTradeLevelTouchesPath,
-		req.DataTables,
-		req.Filters,
-		TradeLevelTouchesColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[TradeLevel](c, ctx, TradeLevelTouchesGetTradeLevelTouchesPath, req, TradeLevelTouchesColumns())
 }
 
 // GetTradeLevelTouchesLimit fetches up to limit trade level touches by paging
@@ -115,15 +85,7 @@ func (c *Client) GetTradeLevelTouchesLimit(
 	req TradeLevelTouchesRequest,
 	limit int,
 ) ([]TradeLevel, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[TradeLevel], error) {
-			req.DataTables = dt
-			return c.GetTradeLevelTouches(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetTradeLevelTouches)
 }
 
 // TradeLevelsColumns returns the DataTables columns captured from the trade
