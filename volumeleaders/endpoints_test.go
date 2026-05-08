@@ -840,7 +840,16 @@ func TestGetEarningsPostsCapturedDataTablesColumns(t *testing.T) {
 			"draw": 6,
 			"recordsTotal": 1,
 			"recordsFiltered": 1,
-			"data": [{"Ticker": "AMD", "Current": 220.25, "TradeCount": 9}]
+			"data": [{
+				"Ticker": "AMD",
+				"Name": "Advanced Micro Devices",
+				"Current": 220.25,
+				"Sector": "Technology",
+				"Industry": "Semiconductors",
+				"TradeCount": 9,
+				"EarningsDate": "/Date(1746662400000)/",
+				"AfterMarketClose": true
+			}]
 		}`))
 	}))
 	t.Cleanup(server.Close)
@@ -854,8 +863,17 @@ func TestGetEarningsPostsCapturedDataTablesColumns(t *testing.T) {
 	})
 	require.NoError(t, err, "GetEarnings()")
 	require.Len(t, resp.Data, 1, "GetEarnings() data")
-	assert.Equal(t, "AMD", resp.Data[0].Ticker, "GetEarnings() Ticker")
-	assert.InDelta(t, 220.25, resp.Data[0].Current, snapshotPriceDelta, "GetEarnings() Current")
+
+	earning := resp.Data[0]
+	assert.Equal(t, "AMD", earning.Ticker, "GetEarnings() Ticker")
+	assert.Equal(t, "Advanced Micro Devices", earning.Name, "GetEarnings() Name")
+	assert.InDelta(t, 220.25, earning.Current, snapshotPriceDelta, "GetEarnings() Current")
+	assert.False(t, earning.EarningsDate.Time.IsZero(), "GetEarnings() EarningsDate should be non-zero")
+	assert.True(t, earning.AfterMarketClose, "GetEarnings() AfterMarketClose")
+	require.NotNil(t, earning.Sector, "GetEarnings() Sector")
+	assert.Equal(t, "Technology", *earning.Sector, "GetEarnings() Sector value")
+	require.NotNil(t, earning.Industry, "GetEarnings() Industry")
+	assert.Equal(t, "Semiconductors", *earning.Industry, "GetEarnings() Industry value")
 
 	form, err := url.ParseQuery(capturedBody)
 	require.NoError(t, err, "ParseQuery(GetEarnings body)")
@@ -1273,9 +1291,9 @@ func TestGetLimitMethodsPageThroughResults(t *testing.T) {
 
 	t.Run("GetEarningsLimit", func(t *testing.T) {
 		items := []string{
-			`{"Ticker":"AAPL","Current":190.5,"TradeCount":5}`,
-			`{"Ticker":"MSFT","Current":420.0,"TradeCount":3}`,
-			`{"Ticker":"NVDA","Current":130.0,"TradeCount":7}`,
+			`{"Ticker":"AAPL","Name":"Apple Inc","Current":190.5,"TradeCount":5}`,
+			`{"Ticker":"MSFT","Name":"Microsoft Corp","Current":420.0,"TradeCount":3}`,
+			`{"Ticker":"NVDA","Name":"NVIDIA Corp","Current":130.0,"TradeCount":7}`,
 		}
 		server := httptest.NewServer(paginatingHandler(t, items))
 		t.Cleanup(server.Close)
@@ -1289,6 +1307,9 @@ func TestGetLimitMethodsPageThroughResults(t *testing.T) {
 		require.NoError(t, err, "GetEarningsLimit(limit 2)")
 		assert.Len(t, results, 2, "GetEarningsLimit(limit 2) results")
 		assert.Equal(t, "AAPL", results[0].Ticker, "GetEarningsLimit() first ticker")
+		assert.Equal(t, "Apple Inc", results[0].Name, "GetEarningsLimit() first name")
+		assert.Nil(t, results[0].Sector, "GetEarningsLimit() nil Sector")
+		assert.Nil(t, results[0].Industry, "GetEarningsLimit() nil Industry")
 	})
 
 	t.Run("GetTradeLevelTouchesLimit", func(t *testing.T) {
