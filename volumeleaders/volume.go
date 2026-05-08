@@ -19,7 +19,7 @@ func (c *Client) GetInstitutionalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return getEndpoint[Trade](c, ctx, InstitutionalVolumeGetInstitutionalVolumePath, req, InstitutionalVolumeColumns())
+	return getEndpoint[Trade](ctx, c, InstitutionalVolumeGetInstitutionalVolumePath, req, InstitutionalVolumeColumns())
 }
 
 // GetAHInstitutionalVolume posts a typed DataTables request to
@@ -28,7 +28,9 @@ func (c *Client) GetAHInstitutionalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return getEndpoint[Trade](c, ctx, AHInstitutionalVolumeGetAHInstitutionalVolumePath, req, AHInstitutionalVolumeColumns())
+	return getEndpoint[Trade](
+		ctx, c, AHInstitutionalVolumeGetAHInstitutionalVolumePath, req, AHInstitutionalVolumeColumns(),
+	)
 }
 
 // GetTotalVolume posts a typed DataTables request to
@@ -37,7 +39,7 @@ func (c *Client) GetTotalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return getEndpoint[Trade](c, ctx, TotalVolumeGetTotalVolumePath, req, TotalVolumeColumns())
+	return getEndpoint[Trade](ctx, c, TotalVolumeGetTotalVolumePath, req, TotalVolumeColumns())
 }
 
 // GetInstitutionalVolumeLimit fetches up to limit trades by paging through
@@ -107,4 +109,3 @@ func AHInstitutionalVolumeColumns() []DataTablesColumn {
 func TotalVolumeColumns() []DataTablesColumn {
 	return volumeColumns("TotalVolume", "TotalDollars", "TotalDollarsRank")
 }
-

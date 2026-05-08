@@ -47,7 +47,7 @@ func (c *Client) GetTradeLevels(
 	ctx context.Context,
 	req TradeLevelsRequest,
 ) (*DataTablesResponse[TradeLevel], error) {
-	return getEndpoint[TradeLevel](c, ctx, TradeLevelsGetTradeLevelsPath, req, TradeLevelsColumns())
+	return getEndpoint[TradeLevel](ctx, c, TradeLevelsGetTradeLevelsPath, req, TradeLevelsColumns())
 }
 
 // GetChartTradeLevels posts a typed DataTables request to
@@ -56,7 +56,7 @@ func (c *Client) GetChartTradeLevels(
 	ctx context.Context,
 	req TradeLevelsRequest,
 ) (*DataTablesResponse[TradeLevel], error) {
-	return getEndpoint[TradeLevel](c, ctx, ChartGetTradeLevelsPath, req, TradeLevelsColumns())
+	return getEndpoint[TradeLevel](ctx, c, ChartGetTradeLevelsPath, req, TradeLevelsColumns())
 }
 
 // GetChart0TradeLevels posts a typed DataTables request to
@@ -65,7 +65,7 @@ func (c *Client) GetChart0TradeLevels(
 	ctx context.Context,
 	req TradeLevelsRequest,
 ) (*DataTablesResponse[TradeLevel], error) {
-	return getEndpoint[TradeLevel](c, ctx, Chart0GetTradeLevelsPath, req, TradeLevelsColumns())
+	return getEndpoint[TradeLevel](ctx, c, Chart0GetTradeLevelsPath, req, TradeLevelsColumns())
 }
 
 // GetTradeLevelTouches posts a typed DataTables request to
@@ -74,7 +74,7 @@ func (c *Client) GetTradeLevelTouches(
 	ctx context.Context,
 	req TradeLevelTouchesRequest,
 ) (*DataTablesResponse[TradeLevel], error) {
-	return getEndpoint[TradeLevel](c, ctx, TradeLevelTouchesGetTradeLevelTouchesPath, req, TradeLevelTouchesColumns())
+	return getEndpoint[TradeLevel](ctx, c, TradeLevelTouchesGetTradeLevelTouchesPath, req, TradeLevelTouchesColumns())
 }
 
 // GetTradeLevelTouchesLimit fetches up to limit trade level touches by paging

@@ -103,7 +103,7 @@ func (c *Client) GetTrades(
 	ctx context.Context,
 	req TradesRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return getEndpoint[Trade](c, ctx, TradesGetTradesPath, req, TradesColumns())
+	return getEndpoint[Trade](ctx, c, TradesGetTradesPath, req, TradesColumns())
 }
 
 // ListTrades fetches one typed trade page without exposing DataTables or raw

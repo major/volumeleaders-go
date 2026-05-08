@@ -53,6 +53,7 @@ type clusterBase struct {
 // TradeCluster represents a VolumeLeaders trade cluster row.
 type TradeCluster struct {
 	clusterBase
+
 	Price                          float64    `json:"Price"`
 	LastComparibleTradeClusterDate AspNetDate `json:"LastComparibleTradeClusterDate"`
 	TradeClusterRank               int        `json:"TradeClusterRank"`
@@ -61,6 +62,7 @@ type TradeCluster struct {
 // TradeClusterBomb represents a VolumeLeaders trade cluster bomb row.
 type TradeClusterBomb struct {
 	clusterBase
+
 	LastComparableTradeClusterBombDate AspNetDate `json:"LastComparableTradeClusterBombDate"`
 	TradeClusterBombRank               int        `json:"TradeClusterBombRank"`
 }
@@ -71,7 +73,7 @@ func (c *Client) GetTradeClusters(
 	ctx context.Context,
 	req TradeClustersRequest,
 ) (*DataTablesResponse[TradeCluster], error) {
-	return getEndpoint[TradeCluster](c, ctx, TradeClustersGetTradeClustersPath, req, TradeClustersColumns())
+	return getEndpoint[TradeCluster](ctx, c, TradeClustersGetTradeClustersPath, req, TradeClustersColumns())
 }
 
 // GetTradeClusterBombs posts a typed DataTables request to
@@ -80,7 +82,9 @@ func (c *Client) GetTradeClusterBombs(
 	ctx context.Context,
 	req TradeClusterBombsRequest,
 ) (*DataTablesResponse[TradeClusterBomb], error) {
-	return getEndpoint[TradeClusterBomb](c, ctx, TradeClusterBombsGetTradeClusterBombsPath, req, TradeClusterBombsColumns())
+	return getEndpoint[TradeClusterBomb](
+		ctx, c, TradeClusterBombsGetTradeClusterBombsPath, req, TradeClusterBombsColumns(),
+	)
 }
 
 // GetTradeClustersLimit fetches up to limit trade clusters by paging through

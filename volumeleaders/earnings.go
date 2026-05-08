@@ -30,7 +30,7 @@ func (c *Client) GetEarnings(
 	ctx context.Context,
 	req EarningsRequest,
 ) (*DataTablesResponse[Earning], error) {
-	return getEndpoint[Earning](c, ctx, EarningsGetEarningsPath, req, EarningsColumns())
+	return getEndpoint[Earning](ctx, c, EarningsGetEarningsPath, req, EarningsColumns())
 }
 
 // GetEarningsLimit fetches up to limit earnings by paging through GetEarnings.

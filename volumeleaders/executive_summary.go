@@ -59,7 +59,7 @@ func (c *Client) GetWelcomeTrades(
 	ctx context.Context,
 	req WelcomeTradesRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return getEndpoint[Trade](c, ctx, ExecutiveSummaryGetWelcomeTradesPath, req, WelcomeTradesColumns())
+	return getEndpoint[Trade](ctx, c, ExecutiveSummaryGetWelcomeTradesPath, req, WelcomeTradesColumns())
 }
 
 // GetWelcomeTradeClusters posts a typed DataTables request to
@@ -68,7 +68,9 @@ func (c *Client) GetWelcomeTradeClusters(
 	ctx context.Context,
 	req WelcomeTradeClustersRequest,
 ) (*DataTablesResponse[TradeCluster], error) {
-	return getEndpoint[TradeCluster](c, ctx, ExecutiveSummaryGetWelcomeTradeClustersPath, req, WelcomeTradeClustersColumns())
+	return getEndpoint[TradeCluster](
+		ctx, c, ExecutiveSummaryGetWelcomeTradeClustersPath, req, WelcomeTradeClustersColumns(),
+	)
 }
 
 // GetAllSnapshots posts a JSON null request to /Trades/GetAllSnapshots and

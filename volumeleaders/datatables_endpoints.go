@@ -62,10 +62,10 @@ func (c *Client) postDataTables(
 }
 
 // getEndpoint posts a typed DataTables request and decodes the response into a
-// DataTablesResponse[T]. Every Get* endpoint method delegates here.
+// DataTablesResponse[T]. Every DataTables Get* endpoint method delegates here.
 func getEndpoint[T any](
-	c *Client,
 	ctx context.Context,
+	c *Client,
 	path string,
 	req EndpointRequest,
 	columns []DataTablesColumn,

@@ -927,5 +927,3 @@ func TestFindSessionRedactsStatusErrorSecrets(t *testing.T) {
 	assert.ErrorAs(t, err, &statusErr,
 		"status error must remain matchable with errors.As")
 }
-
-

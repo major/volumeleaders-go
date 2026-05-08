@@ -130,7 +130,7 @@ func (c *Client) GetAlertConfigs(
 	ctx context.Context,
 	req AlertConfigsRequest,
 ) (*DataTablesResponse[AlertConfig], error) {
-	return getEndpoint[AlertConfig](c, ctx, AlertConfigsGetAlertConfigsPath, req, AlertConfigsColumns())
+	return getEndpoint[AlertConfig](ctx, c, AlertConfigsGetAlertConfigsPath, req, AlertConfigsColumns())
 }
 
 // GetTradeAlerts posts a typed DataTables request to
@@ -139,7 +139,7 @@ func (c *Client) GetTradeAlerts(
 	ctx context.Context,
 	req TradeAlertsRequest,
 ) (*DataTablesResponse[TradeAlert], error) {
-	return getEndpoint[TradeAlert](c, ctx, TradeAlertsGetTradeAlertsPath, req, TradeAlertsColumns())
+	return getEndpoint[TradeAlert](ctx, c, TradeAlertsGetTradeAlertsPath, req, TradeAlertsColumns())
 }
 
 // GetTradeClusterAlerts posts a typed DataTables request to
@@ -148,7 +148,9 @@ func (c *Client) GetTradeClusterAlerts(
 	ctx context.Context,
 	req TradeClusterAlertsRequest,
 ) (*DataTablesResponse[TradeClusterAlert], error) {
-	return getEndpoint[TradeClusterAlert](c, ctx, TradeClusterAlertsGetTradeClusterAlertsPath, req, TradeClusterAlertsColumns())
+	return getEndpoint[TradeClusterAlert](
+		ctx, c, TradeClusterAlertsGetTradeClusterAlertsPath, req, TradeClusterAlertsColumns(),
+	)
 }
 
 // GetAlertConfigsLimit fetches up to limit alert configs by paging through
@@ -215,4 +217,3 @@ func TradeAlertsColumns() []DataTablesColumn {
 func TradeClusterAlertsColumns() []DataTablesColumn {
 	return TradeClustersColumns()
 }
-
