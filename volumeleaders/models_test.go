@@ -112,18 +112,20 @@ func TestFlexBoolMarshalJSON(t *testing.T) {
 
 func TestTradeSemanticAccessors(t *testing.T) {
 	trade := Trade{
-		FrequencyLast30TD: 3,
-		FrequencyLast90TD: 7,
-		FrequencyLast1CY:  12,
-		PhantomPrint:      true,
-		OPEX:              true,
-		VOLEX:             true,
-		Cancelled:         true,
+		FrequencyLast30TD:      3,
+		FrequencyLast90TD:      7,
+		FrequencyLast1CY:       12,
+		CumulativeDistribution: 0.97,
+		PhantomPrint:           true,
+		OPEX:                   true,
+		VOLEX:                  true,
+		Cancelled:              true,
 	}
 
 	assert.Equal(t, 3, trade.SimilarTradeCountLast30Days())
 	assert.Equal(t, 7, trade.SimilarTradeCountLast90Days())
 	assert.Equal(t, 12, trade.SimilarTradeCountLastYear())
+	assert.InDelta(t, 0.97, trade.PercentileRank(), 0)
 	assert.True(t, trade.IsPhantomPrint())
 	assert.True(t, trade.IsOptionsExpiration())
 	assert.True(t, trade.IsVolatilityExpiration())

@@ -203,6 +203,16 @@ func (t Trade) SimilarTradeCountLastYear() int {
 	return t.FrequencyLast1CY
 }
 
+// PercentileRank returns the trade's percentile rank relative to all other
+// VolumeLeaders trades for the same ticker.
+//
+// VolumeLeaders labels this value as cumulative distribution, or VCD, in some
+// request and alert fields. Higher values indicate trades that rank farther out
+// in the ticker's historical trade-size distribution.
+func (t Trade) PercentileRank() float64 {
+	return t.CumulativeDistribution
+}
+
 // IsPhantomPrint reports whether VolumeLeaders marked the trade as a print far
 // from the current price.
 func (t Trade) IsPhantomPrint() bool {
