@@ -416,6 +416,7 @@ func TestGetWatchListTickersParsesCapturedSchema(t *testing.T) {
 				"NearestTop10TradeClusterVolume": 81266351,
 				"NearestTop10TradeClusterDollars": 22240171565.69,
 				"NearestTop10TradeClusterRank": 4,
+				"NearestTop10TradeLevel": 273.7,
 				"NearestTop10TradeLevelDate": "/Date(1762819200000)/",
 				"NearestTop10TradeLevelPrice": 273.7,
 				"NearestTop10TradeLevelVolume": 96872511,
@@ -437,6 +438,11 @@ func TestGetWatchListTickersParsesCapturedSchema(t *testing.T) {
 	require.Len(t, resp.Data, 1, "GetWatchListTickers() data")
 	assert.Equal(t, 63, resp.Data[0].SecurityKey, "GetWatchListTickers() SecurityKey")
 	assert.Equal(t, "AAPL", resp.Data[0].Ticker, "GetWatchListTickers() Ticker")
+	require.NotNil(t, resp.Data[0].NearestTop10TradeLevel, "GetWatchListTickers() NearestTop10TradeLevel")
+	assert.InDelta(
+		t, 273.7, *resp.Data[0].NearestTop10TradeLevel, 0.000001,
+		"GetWatchListTickers() NearestTop10TradeLevel",
+	)
 	assert.Equal(t, 3, resp.Data[0].NearestTop10TradeLevelRank, "GetWatchListTickers() level rank")
 
 	form, err := url.ParseQuery(capturedBody)

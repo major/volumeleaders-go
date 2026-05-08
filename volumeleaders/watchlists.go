@@ -139,6 +139,7 @@ type WatchListTicker struct {
 	NearestTop10TradeClusterVolume  int        `json:"NearestTop10TradeClusterVolume"`
 	NearestTop10TradeClusterDollars float64    `json:"NearestTop10TradeClusterDollars"`
 	NearestTop10TradeClusterRank    int        `json:"NearestTop10TradeClusterRank"`
+	NearestTop10TradeLevel          *float64   `json:"NearestTop10TradeLevel"`
 	NearestTop10TradeLevelDate      AspNetDate `json:"NearestTop10TradeLevelDate"`
 	NearestTop10TradeLevelPrice     float64    `json:"NearestTop10TradeLevelPrice"`
 	NearestTop10TradeLevelVolume    int        `json:"NearestTop10TradeLevelVolume"`
