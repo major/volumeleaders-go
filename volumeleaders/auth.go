@@ -2,7 +2,6 @@ package volumeleaders
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"path"
 	"regexp"
@@ -36,43 +35,11 @@ func FetchXSRFToken(ctx context.Context, session Session, opts ...Option) (strin
 	if err != nil {
 		return "", err
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, client.resolve(executiveSummaryPath), nil)
-	if err != nil {
-		return "", fmt.Errorf("create XSRF token request: %w", err)
-	}
-	client.setHeaders(req)
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	for _, cookie := range client.session.Cookies {
-		req.AddCookie(cookie)
-	}
-
-	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("fetch XSRF token page: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if redirectedToLogin(resp) {
-		return "", sessionExpiredError{redirectPath: safeResponsePath(resp)}
-	}
-
-	body, err := client.readBody(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("read XSRF token page: %w", err)
-	}
-	if looksLikeLoginPage(resp, body) {
-		return "", sessionExpiredError{redirectPath: safeResponsePath(resp)}
-	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return "", statusError(resp, body)
-	}
-
-	token, err := parseXSRFToken(body)
+	body, err := client.getHTML(ctx, executiveSummaryPath)
 	if err != nil {
 		return "", err
 	}
-	return token, nil
+	return parseXSRFToken(body)
 }
 
 func parseXSRFToken(body []byte) (string, error) {

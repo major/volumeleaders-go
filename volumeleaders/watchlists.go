@@ -23,13 +23,9 @@ type WatchListsRequest = EndpointRequest
 // filters for /WatchLists/GetWatchListTickers.
 type WatchListTickersRequest = EndpointRequest
 
-// SaveWatchListConfigRequest contains the multipart form fields submitted to
-// /WatchListConfig when creating or editing a watchlist.
-type SaveWatchListConfigRequest struct {
-	// Fields is a low-level captured-form escape hatch. Callers must provide the
-	// exact browser field names and values accepted by VolumeLeaders.
-	Fields url.Values
-}
+// SaveWatchListConfigRequest is the multipart form payload for watchlist
+// configuration create/edit requests.
+type SaveWatchListConfigRequest = SaveConfigRequest
 
 // AddTickerToWatchListRequest contains the form payload for adding a ticker to
 // an existing watchlist from the chart page.
@@ -162,7 +158,7 @@ func (c *Client) GetWatchListTickers(
 // SaveWatchListConfig posts a multipart create or edit request to
 // /WatchListConfig.
 func (c *Client) SaveWatchListConfig(ctx context.Context, req SaveWatchListConfigRequest) error {
-	return c.postMultipartForm(ctx, WatchListConfigPath, mergeValues(req.Fields, nil), nil)
+	return c.saveConfig(ctx, WatchListConfigPath, req.Fields)
 }
 
 // AddTickerToWatchList posts a chart-page watchlist update request that adds a
@@ -203,8 +199,8 @@ func WatchListsColumns() []DataTablesColumn {
 // watchlist tickers table.
 func WatchListTickersColumns() []DataTablesColumn {
 	return []DataTablesColumn{
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
+		colTicker(),
+		colPrice(),
 		{Data: "NearestTop10TradeDate", Name: "NearestTop10TradeDate", Searchable: true, Orderable: true},
 		{Data: "NearestTop10TradeClusterDate", Name: "NearestTop10TradeClusterDate", Searchable: true, Orderable: true},
 		{Data: columnNearestTop10TradeLevel, Name: columnNearestTop10TradeLevel, Searchable: true, Orderable: true},

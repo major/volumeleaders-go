@@ -48,23 +48,13 @@ func (c *Client) GetEarningsLimit(
 func EarningsColumns() []DataTablesColumn {
 	return []DataTablesColumn{
 		{Data: columnDate, Name: "Earnings Date", Searchable: true, Orderable: true},
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnCurrent, Name: columnCurrent, Searchable: true, Orderable: false},
-		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
-		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
+		colTicker(),
+		colCurrent(),
+		colSector(),
+		colIndustry(),
 		{Data: columnTradeCount, Name: "Recent Top-100 Trades", Searchable: true, Orderable: true},
-		{
-			Data:       "TradeClusterCount",
-			Name:       "Recent Top-100 Clusters",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       "TradeClusterBombCount",
-			Name:       "Recent Top-100 Bombs",
-			Searchable: true,
-			Orderable:  true,
-		},
+		{Data: "TradeClusterCount", Name: "Recent Top-100 Clusters", Searchable: true, Orderable: true},
+		{Data: "TradeClusterBombCount", Name: "Recent Top-100 Bombs", Searchable: true, Orderable: true},
 		{Data: columnTicker, Name: columnCharts, Searchable: true, Orderable: false},
 	}
 }

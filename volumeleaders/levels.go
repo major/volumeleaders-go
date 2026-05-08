@@ -92,17 +92,12 @@ func (c *Client) GetTradeLevelTouchesLimit(
 // levels table.
 func TradeLevelsColumns() []DataTablesColumn {
 	return []DataTablesColumn{
-		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
-		{Data: columnDollars, Name: columnDollarsName, Searchable: true, Orderable: true},
+		colPrice(),
+		colDollars(),
 		{Data: tradeColumnVolume, Name: columnSharesName, Searchable: true, Orderable: true},
 		{Data: columnTrades, Name: columnTrades, Searchable: true, Orderable: true},
 		{Data: columnRelativeSize, Name: columnRelativeSizeName, Searchable: true, Orderable: true},
-		{
-			Data:       columnCumulativeDistribution,
-			Name:       columnPercentName,
-			Searchable: true,
-			Orderable:  true,
-		},
+		colCumulativePct(),
 		{Data: columnTradeLevelRank, Name: columnLevelRank, Searchable: true, Orderable: true},
 		{Data: columnDates, Name: columnLevelDateRange, Searchable: true, Orderable: false},
 	}
@@ -113,20 +108,15 @@ func TradeLevelsColumns() []DataTablesColumn {
 func TradeLevelTouchesColumns() []DataTablesColumn {
 	return []DataTablesColumn{
 		{Data: columnFullDateTime, Name: "Date/Time", Searchable: true, Orderable: true},
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
-		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{Data: columnDollars, Name: columnDollarsName, Searchable: true, Orderable: true},
+		colTicker(),
+		colSector(),
+		colIndustry(),
+		colDollars(),
 		{Data: tradeColumnVolume, Name: columnSharesName, Searchable: true, Orderable: true},
 		{Data: columnTrades, Name: columnTrades, Searchable: true, Orderable: true},
-		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
+		colPrice(),
 		{Data: columnRelativeSize, Name: columnRelativeSizeName, Searchable: true, Orderable: true},
-		{
-			Data:       columnCumulativeDistribution,
-			Name:       columnPercentName,
-			Searchable: true,
-			Orderable:  true,
-		},
+		colCumulativePct(),
 		{Data: columnTradeLevelRank, Name: columnLevelRank, Searchable: true, Orderable: true},
 		{Data: columnDates, Name: columnLevelDateRange, Searchable: true, Orderable: false},
 		{Data: "", Name: "", Searchable: true, Orderable: false},

@@ -101,10 +101,10 @@ func (c *Client) GetAllSnapshotsString(ctx context.Context) (string, error) {
 // trades table.
 func WelcomeTradesColumns() []DataTablesColumn {
 	return []DataTablesColumn{
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
+		colTicker(),
 		{Data: columnTradeRank, Name: columnRName, Searchable: true, Orderable: true},
-		{Data: columnDollarsMultiplier, Name: columnRelativeSizeName, Searchable: true, Orderable: true},
-		{Data: columnCumulativeDistribution, Name: columnPercentName, Searchable: true, Orderable: true},
+		colMultiplier(),
+		colCumulativePct(),
 		{Data: tradeColumnLastTradeDate, Name: columnCharts, Searchable: true, Orderable: false},
 	}
 }
@@ -113,10 +113,10 @@ func WelcomeTradesColumns() []DataTablesColumn {
 // welcome trade clusters table.
 func WelcomeTradeClustersColumns() []DataTablesColumn {
 	return []DataTablesColumn{
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
+		colTicker(),
 		{Data: columnTradeClusterRank, Name: columnRName, Searchable: true, Orderable: true},
-		{Data: columnDollarsMultiplier, Name: columnRelativeSizeName, Searchable: true, Orderable: true},
-		{Data: columnCumulativeDistribution, Name: columnPercentName, Searchable: true, Orderable: true},
+		colMultiplier(),
+		colCumulativePct(),
 		{Data: columnLastComparibleTradeClusterDate, Name: columnCharts, Searchable: true, Orderable: false},
 	}
 }
