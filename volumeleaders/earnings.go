@@ -33,7 +33,10 @@ type Earning struct {
 }
 
 // GetEarnings posts a typed DataTables request to /Earnings/GetEarnings.
-func (c *Client) GetEarnings(ctx context.Context, req EarningsRequest) (*DataTablesResponse[Earning], error) {
+func (c *Client) GetEarnings(
+	ctx context.Context,
+	req EarningsRequest,
+) (*DataTablesResponse[Earning], error) {
 	var result DataTablesResponse[Earning]
 	if err := c.postDataTables(
 		ctx,
@@ -48,6 +51,24 @@ func (c *Client) GetEarnings(ctx context.Context, req EarningsRequest) (*DataTab
 	return &result, nil
 }
 
+// GetEarningsLimit fetches up to limit earnings by paging through GetEarnings.
+// A zero or negative limit fetches all available records.
+func (c *Client) GetEarningsLimit(
+	ctx context.Context,
+	req EarningsRequest,
+	limit int,
+) ([]Earning, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Earning], error) {
+			req.DataTables = dt
+			return c.GetEarnings(ctx, req)
+		},
+	)
+}
+
 // EarningsColumns returns the DataTables columns captured from the earnings
 // table.
 func EarningsColumns() []DataTablesColumn {
@@ -58,8 +79,18 @@ func EarningsColumns() []DataTablesColumn {
 		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
 		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
 		{Data: columnTradeCount, Name: "Recent Top-100 Trades", Searchable: true, Orderable: true},
-		{Data: "TradeClusterCount", Name: "Recent Top-100 Clusters", Searchable: true, Orderable: true},
-		{Data: "TradeClusterBombCount", Name: "Recent Top-100 Bombs", Searchable: true, Orderable: true},
+		{
+			Data:       "TradeClusterCount",
+			Name:       "Recent Top-100 Clusters",
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       "TradeClusterBombCount",
+			Name:       "Recent Top-100 Bombs",
+			Searchable: true,
+			Orderable:  true,
+		},
 		{Data: columnTicker, Name: columnCharts, Searchable: true, Orderable: false},
 	}
 }

@@ -193,6 +193,61 @@ func (c *Client) GetTradeClusterAlerts(
 	return &result, nil
 }
 
+// GetAlertConfigsLimit fetches up to limit alert configs by paging through
+// GetAlertConfigs. A zero or negative limit fetches all available records.
+func (c *Client) GetAlertConfigsLimit(
+	ctx context.Context,
+	req AlertConfigsRequest,
+	limit int,
+) ([]AlertConfig, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[AlertConfig], error) {
+			req.DataTables = dt
+			return c.GetAlertConfigs(ctx, req)
+		},
+	)
+}
+
+// GetTradeAlertsLimit fetches up to limit trade alerts by paging through
+// GetTradeAlerts. A zero or negative limit fetches all available records.
+func (c *Client) GetTradeAlertsLimit(
+	ctx context.Context,
+	req TradeAlertsRequest,
+	limit int,
+) ([]TradeAlert, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[TradeAlert], error) {
+			req.DataTables = dt
+			return c.GetTradeAlerts(ctx, req)
+		},
+	)
+}
+
+// GetTradeClusterAlertsLimit fetches up to limit trade cluster alerts by
+// paging through GetTradeClusterAlerts. A zero or negative limit fetches all
+// available records.
+func (c *Client) GetTradeClusterAlertsLimit(
+	ctx context.Context,
+	req TradeClusterAlertsRequest,
+	limit int,
+) ([]TradeClusterAlert, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[TradeClusterAlert], error) {
+			req.DataTables = dt
+			return c.GetTradeClusterAlerts(ctx, req)
+		},
+	)
+}
+
 // SaveAlertConfig posts a multipart create or edit request to /AlertConfig.
 func (c *Client) SaveAlertConfig(ctx context.Context, req SaveAlertConfigRequest) error {
 	return c.postMultipartForm(ctx, AlertConfigPath, cloneValues(req.Fields), nil)

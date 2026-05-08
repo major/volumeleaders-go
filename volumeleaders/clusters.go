@@ -138,12 +138,54 @@ func (c *Client) GetTradeClusterBombs(
 	return &result, nil
 }
 
+// GetTradeClustersLimit fetches up to limit trade clusters by paging through
+// GetTradeClusters. A zero or negative limit fetches all available records.
+func (c *Client) GetTradeClustersLimit(
+	ctx context.Context,
+	req TradeClustersRequest,
+	limit int,
+) ([]TradeCluster, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[TradeCluster], error) {
+			req.DataTables = dt
+			return c.GetTradeClusters(ctx, req)
+		},
+	)
+}
+
+// GetTradeClusterBombsLimit fetches up to limit trade cluster bombs by paging
+// through GetTradeClusterBombs. A zero or negative limit fetches all available
+// records.
+func (c *Client) GetTradeClusterBombsLimit(
+	ctx context.Context,
+	req TradeClusterBombsRequest,
+	limit int,
+) ([]TradeClusterBomb, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[TradeClusterBomb], error) {
+			req.DataTables = dt
+			return c.GetTradeClusterBombs(ctx, req)
+		},
+	)
+}
+
 // TradeClustersColumns returns the DataTables columns captured from the trade
 // clusters table.
 func TradeClustersColumns() []DataTablesColumn {
 	return []DataTablesColumn{
 		{Data: columnMinFullTimeString24, Name: "", Searchable: true, Orderable: false},
-		{Data: columnMinFullTimeString24, Name: columnMinFullTimeString24, Searchable: true, Orderable: true},
+		{
+			Data:       columnMinFullTimeString24,
+			Name:       columnMinFullTimeString24,
+			Searchable: true,
+			Orderable:  true,
+		},
 		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
 		{Data: columnTradeCount, Name: columnTrades, Searchable: true, Orderable: true},
 		{Data: columnCurrent, Name: columnCurrent, Searchable: true, Orderable: false},
@@ -152,11 +194,31 @@ func TradeClustersColumns() []DataTablesColumn {
 		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
 		{Data: tradeColumnVolume, Name: columnShName, Searchable: true, Orderable: true},
 		{Data: columnDollars, Name: columnDollarsName, Searchable: true, Orderable: true},
-		{Data: columnDollarsMultiplier, Name: columnRelativeSizeName, Searchable: true, Orderable: true},
-		{Data: columnCumulativeDistribution, Name: columnPercentName, Searchable: true, Orderable: true},
+		{
+			Data:       columnDollarsMultiplier,
+			Name:       columnRelativeSizeName,
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       columnCumulativeDistribution,
+			Name:       columnPercentName,
+			Searchable: true,
+			Orderable:  true,
+		},
 		{Data: columnTradeClusterRank, Name: columnRankName, Searchable: true, Orderable: true},
-		{Data: columnLastComparibleTradeClusterDate, Name: columnLastDateName, Searchable: true, Orderable: true},
-		{Data: columnLastComparibleTradeClusterDate, Name: columnLastDateName, Searchable: true, Orderable: false},
+		{
+			Data:       columnLastComparibleTradeClusterDate,
+			Name:       columnLastDateName,
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       columnLastComparibleTradeClusterDate,
+			Name:       columnLastDateName,
+			Searchable: true,
+			Orderable:  false,
+		},
 	}
 }
 
@@ -164,17 +226,42 @@ func TradeClustersColumns() []DataTablesColumn {
 // trade cluster bombs table.
 func TradeClusterBombsColumns() []DataTablesColumn {
 	return []DataTablesColumn{
-		{Data: columnMinFullTimeString24, Name: columnMinFullTimeString24, Searchable: true, Orderable: true},
+		{
+			Data:       columnMinFullTimeString24,
+			Name:       columnMinFullTimeString24,
+			Searchable: true,
+			Orderable:  true,
+		},
 		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
 		{Data: columnTradeCount, Name: columnTrades, Searchable: true, Orderable: true},
 		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
 		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
 		{Data: tradeColumnVolume, Name: columnShName, Searchable: true, Orderable: true},
 		{Data: columnDollars, Name: columnDollarsName, Searchable: true, Orderable: true},
-		{Data: columnDollarsMultiplier, Name: columnRelativeSizeName, Searchable: true, Orderable: true},
-		{Data: columnCumulativeDistribution, Name: columnPercentName, Searchable: true, Orderable: true},
+		{
+			Data:       columnDollarsMultiplier,
+			Name:       columnRelativeSizeName,
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       columnCumulativeDistribution,
+			Name:       columnPercentName,
+			Searchable: true,
+			Orderable:  true,
+		},
 		{Data: columnTradeClusterBombRank, Name: columnRankName, Searchable: true, Orderable: true},
-		{Data: columnLastComparableTradeClusterBombDate, Name: columnLastDateName, Searchable: true, Orderable: true},
-		{Data: columnLastComparableTradeClusterBombDate, Name: columnLastDateName, Searchable: true, Orderable: false},
+		{
+			Data:       columnLastComparableTradeClusterBombDate,
+			Name:       columnLastDateName,
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       columnLastComparableTradeClusterBombDate,
+			Name:       columnLastDateName,
+			Searchable: true,
+			Orderable:  false,
+		},
 	}
 }

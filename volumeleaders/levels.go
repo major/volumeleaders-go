@@ -116,6 +116,25 @@ func (c *Client) GetTradeLevelTouches(
 	return &result, nil
 }
 
+// GetTradeLevelTouchesLimit fetches up to limit trade level touches by paging
+// through GetTradeLevelTouches. A zero or negative limit fetches all available
+// records.
+func (c *Client) GetTradeLevelTouchesLimit(
+	ctx context.Context,
+	req TradeLevelTouchesRequest,
+	limit int,
+) ([]TradeLevel, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[TradeLevel], error) {
+			req.DataTables = dt
+			return c.GetTradeLevelTouches(ctx, req)
+		},
+	)
+}
+
 // TradeLevelsColumns returns the DataTables columns captured from the trade
 // levels table.
 func TradeLevelsColumns() []DataTablesColumn {
@@ -125,7 +144,12 @@ func TradeLevelsColumns() []DataTablesColumn {
 		{Data: tradeColumnVolume, Name: columnSharesName, Searchable: true, Orderable: true},
 		{Data: columnTrades, Name: columnTrades, Searchable: true, Orderable: true},
 		{Data: columnRelativeSize, Name: columnRelativeSizeName, Searchable: true, Orderable: true},
-		{Data: columnCumulativeDistribution, Name: columnPercentName, Searchable: true, Orderable: true},
+		{
+			Data:       columnCumulativeDistribution,
+			Name:       columnPercentName,
+			Searchable: true,
+			Orderable:  true,
+		},
 		{Data: columnTradeLevelRank, Name: columnLevelRank, Searchable: true, Orderable: true},
 		{Data: columnDates, Name: columnLevelDateRange, Searchable: true, Orderable: false},
 	}
@@ -144,7 +168,12 @@ func TradeLevelTouchesColumns() []DataTablesColumn {
 		{Data: columnTrades, Name: columnTrades, Searchable: true, Orderable: true},
 		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
 		{Data: columnRelativeSize, Name: columnRelativeSizeName, Searchable: true, Orderable: true},
-		{Data: columnCumulativeDistribution, Name: columnPercentName, Searchable: true, Orderable: true},
+		{
+			Data:       columnCumulativeDistribution,
+			Name:       columnPercentName,
+			Searchable: true,
+			Orderable:  true,
+		},
 		{Data: columnTradeLevelRank, Name: columnLevelRank, Searchable: true, Orderable: true},
 		{Data: columnDates, Name: columnLevelDateRange, Searchable: true, Orderable: false},
 		{Data: "", Name: "", Searchable: true, Orderable: false},

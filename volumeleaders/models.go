@@ -116,10 +116,10 @@ type Trade struct {
 	VOLEX                         FlexBool   `json:"VOLEX"`
 	Ticker                        string     `json:"Ticker"`
 	Sector                        string     `json:"Sector"`
-	Industry                      string     `json:"Industry"`
+	Industry                      *string    `json:"Industry"`
 	Name                          string     `json:"Name"`
-	FullDateTime                  string     `json:"FullDateTime"`
-	FullTimeString24              string     `json:"FullTimeString24"`
+	FullDateTime                  *string    `json:"FullDateTime"`
+	FullTimeString24              *string    `json:"FullTimeString24"`
 	Price                         float64    `json:"Price"`
 	Bid                           float64    `json:"Bid"`
 	Ask                           float64    `json:"Ask"`
