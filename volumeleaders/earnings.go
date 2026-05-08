@@ -1,19 +1,13 @@
 package volumeleaders
 
-import (
-	"context"
-	"net/url"
-)
+import "context"
 
 // EarningsGetEarningsPath is the browser endpoint path for earnings rows.
 const EarningsGetEarningsPath = "/Earnings/GetEarnings"
 
 // EarningsRequest contains DataTables paging and optional endpoint filters for
 // /Earnings/GetEarnings.
-type EarningsRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type EarningsRequest = EndpointRequest
 
 // Earning represents a VolumeLeaders earnings row.
 type Earning struct {

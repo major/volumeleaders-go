@@ -1,9 +1,6 @@
 package volumeleaders
 
-import (
-	"context"
-	"net/url"
-)
+import "context"
 
 // Browser endpoint paths for trade level APIs captured from VolumeLeaders.
 const (
@@ -15,17 +12,11 @@ const (
 
 // TradeLevelsRequest contains DataTables paging and optional endpoint filters
 // for /TradeLevels/GetTradeLevels.
-type TradeLevelsRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type TradeLevelsRequest = EndpointRequest
 
 // TradeLevelTouchesRequest contains DataTables paging and optional endpoint
 // filters for /TradeLevelTouches/GetTradeLevelTouches.
-type TradeLevelTouchesRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type TradeLevelTouchesRequest = EndpointRequest
 
 // TradeLevel represents a VolumeLeaders trade level or level touch row.
 type TradeLevel struct {

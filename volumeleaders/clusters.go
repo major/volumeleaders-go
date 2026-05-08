@@ -1,9 +1,6 @@
 package volumeleaders
 
-import (
-	"context"
-	"net/url"
-)
+import "context"
 
 // Browser endpoint paths for trade cluster APIs captured from VolumeLeaders.
 const (
@@ -13,17 +10,11 @@ const (
 
 // TradeClustersRequest contains DataTables paging and optional endpoint filters
 // for /TradeClusters/GetTradeClusters.
-type TradeClustersRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type TradeClustersRequest = EndpointRequest
 
 // TradeClusterBombsRequest contains DataTables paging and optional endpoint
 // filters for /TradeClusterBombs/GetTradeClusterBombs.
-type TradeClusterBombsRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type TradeClusterBombsRequest = EndpointRequest
 
 // TradeCluster represents a VolumeLeaders trade cluster row.
 type TradeCluster struct {

@@ -1,9 +1,6 @@
 package volumeleaders
 
-import (
-	"context"
-	"net/url"
-)
+import "context"
 
 // Browser endpoint paths for volume leaderboard APIs used by VolumeLeaders.
 const (
@@ -14,10 +11,7 @@ const (
 
 // VolumeRequest contains DataTables paging and optional endpoint filters for
 // volume leaderboard endpoints.
-type VolumeRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type VolumeRequest = EndpointRequest
 
 // GetInstitutionalVolume posts a typed DataTables request to
 // /InstitutionalVolume/GetInstitutionalVolume.

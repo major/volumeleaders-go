@@ -41,6 +41,14 @@ type DataTablesRequest struct {
 	Extra         url.Values
 }
 
+// EndpointRequest bundles DataTables paging with optional endpoint filters.
+// Most VolumeLeaders DataTables endpoints accept this same two-field shape;
+// endpoint-specific type aliases are provided for readability.
+type EndpointRequest struct {
+	DataTables DataTablesRequest
+	Filters    url.Values
+}
+
 // DataTablesResponse is the typed server-side DataTables JSON envelope.
 type DataTablesResponse[T any] struct {
 	Draw            int `json:"draw"`

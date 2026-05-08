@@ -16,24 +16,15 @@ const (
 
 // AlertConfigsRequest contains DataTables paging and optional endpoint filters
 // for /AlertConfigs/GetAlertConfigs.
-type AlertConfigsRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type AlertConfigsRequest = EndpointRequest
 
 // TradeAlertsRequest contains DataTables paging and optional endpoint filters
 // for /TradeAlerts/GetTradeAlerts.
-type TradeAlertsRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type TradeAlertsRequest = EndpointRequest
 
 // TradeClusterAlertsRequest contains DataTables paging and optional endpoint
 // filters for /TradeClusterAlerts/GetTradeClusterAlerts.
-type TradeClusterAlertsRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type TradeClusterAlertsRequest = EndpointRequest
 
 // SaveAlertConfigRequest contains the multipart form fields submitted to
 // /AlertConfig when creating or editing an alert.
@@ -250,7 +241,7 @@ func (c *Client) GetTradeClusterAlertsLimit(
 
 // SaveAlertConfig posts a multipart create or edit request to /AlertConfig.
 func (c *Client) SaveAlertConfig(ctx context.Context, req SaveAlertConfigRequest) error {
-	return c.postMultipartForm(ctx, AlertConfigPath, cloneValues(req.Fields), nil)
+	return c.postMultipartForm(ctx, AlertConfigPath, mergeValues(req.Fields, nil), nil)
 }
 
 // DeleteAlertConfig posts a JSON delete request to
@@ -282,12 +273,3 @@ func TradeClusterAlertsColumns() []DataTablesColumn {
 	return TradeClustersColumns()
 }
 
-func cloneValues(values url.Values) url.Values {
-	cloned := url.Values{}
-	for key, items := range values {
-		for _, item := range items {
-			cloned.Add(key, item)
-		}
-	}
-	return cloned
-}

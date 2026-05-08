@@ -17,17 +17,11 @@ const (
 
 // WatchListsRequest contains DataTables paging and optional endpoint filters
 // for /WatchListConfigs/GetWatchLists.
-type WatchListsRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type WatchListsRequest = EndpointRequest
 
 // WatchListTickersRequest contains DataTables paging and optional endpoint
 // filters for /WatchLists/GetWatchListTickers.
-type WatchListTickersRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type WatchListTickersRequest = EndpointRequest
 
 // SaveWatchListConfigRequest contains the multipart form fields submitted to
 // /WatchListConfig when creating or editing a watchlist.
@@ -190,7 +184,7 @@ func (c *Client) GetWatchListTickers(
 // SaveWatchListConfig posts a multipart create or edit request to
 // /WatchListConfig.
 func (c *Client) SaveWatchListConfig(ctx context.Context, req SaveWatchListConfigRequest) error {
-	return c.postMultipartForm(ctx, WatchListConfigPath, cloneValues(req.Fields), nil)
+	return c.postMultipartForm(ctx, WatchListConfigPath, mergeValues(req.Fields, nil), nil)
 }
 
 // AddTickerToWatchList posts a chart-page watchlist update request that adds a

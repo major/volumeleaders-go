@@ -3,7 +3,6 @@ package volumeleaders
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -35,17 +34,11 @@ type ExhaustionScores struct {
 
 // WelcomeTradesRequest contains DataTables paging and optional endpoint filters
 // for /ExecutiveSummary/GetWelcomeTrades.
-type WelcomeTradesRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type WelcomeTradesRequest = EndpointRequest
 
 // WelcomeTradeClustersRequest contains DataTables paging and optional endpoint
 // filters for /ExecutiveSummary/GetWelcomeTradeClusters.
-type WelcomeTradeClustersRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type WelcomeTradeClustersRequest = EndpointRequest
 
 // GetExhaustionScores posts a JSON request to
 // /ExecutiveSummary/GetExhaustionScores.
