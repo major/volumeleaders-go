@@ -109,3 +109,23 @@ func TestFlexBoolMarshalJSON(t *testing.T) {
 	require.NoError(t, err, "Marshal(FlexBool(false))")
 	assert.Equal(t, "false", string(data), "Marshal(FlexBool(false))")
 }
+
+func TestTradeSemanticAccessors(t *testing.T) {
+	trade := Trade{
+		FrequencyLast30TD: 3,
+		FrequencyLast90TD: 7,
+		FrequencyLast1CY:  12,
+		PhantomPrint:      true,
+		OPEX:              true,
+		VOLEX:             true,
+		Cancelled:         true,
+	}
+
+	assert.Equal(t, 3, trade.SimilarTradeCountLast30Days())
+	assert.Equal(t, 7, trade.SimilarTradeCountLast90Days())
+	assert.Equal(t, 12, trade.SimilarTradeCountLastYear())
+	assert.True(t, trade.IsPhantomPrint())
+	assert.True(t, trade.IsOptionsExpiration())
+	assert.True(t, trade.IsVolatilityExpiration())
+	assert.True(t, trade.IsCancelled())
+}

@@ -73,6 +73,7 @@ func (d AspNetDate) MarshalJSON() ([]byte, error) {
 }
 
 // FlexBool handles JSON booleans that arrive as 0/1 integers or true/false.
+// The VolumeLeaders API returns boolean fields as numeric 0 and 1.
 type FlexBool bool
 
 // UnmarshalJSON accepts JSON true, false, 0, 1, and null.
@@ -170,7 +171,61 @@ type Trade struct {
 	FrequencyLast30TD             int        `json:"FrequencyLast30TD"`
 	FrequencyLast90TD             int        `json:"FrequencyLast90TD"`
 	FrequencyLast1CY              int        `json:"FrequencyLast1CY"`
-	Cancelled                     FlexBool   `json:"Cancelled"`
+	Cancelled                     FlexBool   `json:"Cancelled"` //nolint:misspell // VolumeLeaders API spells this field "Cancelled".
 	TotalTrades                   int        `json:"TotalTrades"`
 	ExternalFeed                  FlexBool   `json:"ExternalFeed"`
+}
+
+// SimilarTradeCountLast30Days returns how often VolumeLeaders saw trades of
+// this size in the 30-day lookback window.
+//
+// This helps callers distinguish isolated institutional prints from trades
+// that repeat often enough to suggest a recurring pattern.
+func (t Trade) SimilarTradeCountLast30Days() int {
+	return t.FrequencyLast30TD
+}
+
+// SimilarTradeCountLast90Days returns how often VolumeLeaders saw trades of
+// this size in the 90-day lookback window.
+//
+// This broader window gives callers more context for prints that may be rare
+// month-to-month but still recur across a quarter.
+func (t Trade) SimilarTradeCountLast90Days() int {
+	return t.FrequencyLast90TD
+}
+
+// SimilarTradeCountLastYear returns how often VolumeLeaders saw trades of this
+// size in the one-calendar-year lookback window.
+//
+// This longest frequency window helps callers spot whether a print is unusual
+// relative to the ticker's yearly institutional trade history.
+func (t Trade) SimilarTradeCountLastYear() int {
+	return t.FrequencyLast1CY
+}
+
+// IsPhantomPrint reports whether VolumeLeaders marked the trade as a print far
+// from the current price.
+func (t Trade) IsPhantomPrint() bool {
+	return bool(t.PhantomPrint)
+}
+
+// IsOptionsExpiration reports whether the trade occurred during monthly
+// options expiration.
+func (t Trade) IsOptionsExpiration() bool {
+	return bool(t.OPEX)
+}
+
+// IsVolatilityExpiration reports whether the trade occurred during VIX
+// contract expiration.
+func (t Trade) IsVolatilityExpiration() bool {
+	return bool(t.VOLEX)
+}
+
+// IsCancelled reports whether the exchange marked the trade as canceled after
+// it hit the tape.
+//
+// Canceled trades should usually be ignored by analysis because the reported
+// print did not represent a real completed order.
+func (t Trade) IsCancelled() bool {
+	return bool(t.Cancelled)
 }
