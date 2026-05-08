@@ -1,19 +1,13 @@
 package volumeleaders
 
-import (
-	"context"
-	"net/url"
-)
+import "context"
 
 // EarningsGetEarningsPath is the browser endpoint path for earnings rows.
 const EarningsGetEarningsPath = "/Earnings/GetEarnings"
 
 // EarningsRequest contains DataTables paging and optional endpoint filters for
 // /Earnings/GetEarnings.
-type EarningsRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type EarningsRequest = EndpointRequest
 
 // Earning represents a VolumeLeaders earnings row.
 type Earning struct {
@@ -36,18 +30,7 @@ func (c *Client) GetEarnings(
 	ctx context.Context,
 	req EarningsRequest,
 ) (*DataTablesResponse[Earning], error) {
-	var result DataTablesResponse[Earning]
-	if err := c.postDataTables(
-		ctx,
-		EarningsGetEarningsPath,
-		req.DataTables,
-		req.Filters,
-		EarningsColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[Earning](ctx, c, EarningsGetEarningsPath, req, EarningsColumns())
 }
 
 // GetEarningsLimit fetches up to limit earnings by paging through GetEarnings.
@@ -57,15 +40,7 @@ func (c *Client) GetEarningsLimit(
 	req EarningsRequest,
 	limit int,
 ) ([]Earning, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Earning], error) {
-			req.DataTables = dt
-			return c.GetEarnings(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetEarnings)
 }
 
 // EarningsColumns returns the DataTables columns captured from the earnings

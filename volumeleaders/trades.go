@@ -44,10 +44,7 @@ type TradeSort struct {
 
 // TradesRequest contains DataTables paging and optional endpoint filters for
 // /Trades/GetTrades.
-type TradesRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type TradesRequest = EndpointRequest
 
 // TradeQuery contains high-level filters for /Trades/GetTrades.
 //
@@ -106,17 +103,7 @@ func (c *Client) GetTrades(
 	ctx context.Context,
 	req TradesRequest,
 ) (*DataTablesResponse[Trade], error) {
-	dtReq := req.DataTables
-	if len(dtReq.Columns) == 0 {
-		dtReq.Columns = TradesColumns()
-	}
-	dtReq.Extra = mergeValues(dtReq.Extra, req.Filters)
-
-	var result DataTablesResponse[Trade]
-	if err := c.postForm(ctx, TradesGetTradesPath, EncodeDataTablesRequest(dtReq).Encode(), &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[Trade](ctx, c, TradesGetTradesPath, req, TradesColumns())
 }
 
 // ListTrades fetches one typed trade page without exposing DataTables or raw
@@ -153,15 +140,7 @@ func (c *Client) GetTradesLimit(
 	req TradesRequest,
 	limit int,
 ) ([]Trade, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
-			req.DataTables = dt
-			return c.GetTrades(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetTrades)
 }
 
 // ListTradesLimit fetches up to limit trades using the high-level TradeQuery

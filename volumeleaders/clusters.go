@@ -1,9 +1,6 @@
 package volumeleaders
 
-import (
-	"context"
-	"net/url"
-)
+import "context"
 
 // Browser endpoint paths for trade cluster APIs captured from VolumeLeaders.
 const (
@@ -13,89 +10,61 @@ const (
 
 // TradeClustersRequest contains DataTables paging and optional endpoint filters
 // for /TradeClusters/GetTradeClusters.
-type TradeClustersRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type TradeClustersRequest = EndpointRequest
 
 // TradeClusterBombsRequest contains DataTables paging and optional endpoint
 // filters for /TradeClusterBombs/GetTradeClusterBombs.
-type TradeClusterBombsRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
+type TradeClusterBombsRequest = EndpointRequest
+
+// clusterBase holds the fields shared by TradeCluster and TradeClusterBomb.
+type clusterBase struct {
+	Date                    AspNetDate `json:"Date"`
+	DateKey                 int        `json:"DateKey"`
+	SecurityKey             int        `json:"SecurityKey"`
+	Ticker                  string     `json:"Ticker"`
+	Sector                  string     `json:"Sector"`
+	Industry                string     `json:"Industry"`
+	Name                    string     `json:"Name"`
+	MinFullDateTime         string     `json:"MinFullDateTime"`
+	MaxFullDateTime         string     `json:"MaxFullDateTime"`
+	MinFullTimeString24     string     `json:"MinFullTimeString24"`
+	MaxFullTimeString24     string     `json:"MaxFullTimeString24"`
+	ClosePrice              float64    `json:"ClosePrice"`
+	Dollars                 float64    `json:"Dollars"`
+	AverageBlockSizeShares  int        `json:"AverageBlockSizeShares"`
+	AverageBlockSizeDollars float64    `json:"AverageBlockSizeDollars"`
+	Volume                  int        `json:"Volume"`
+	TradeCount              int        `json:"TradeCount"`
+	IPODate                 AspNetDate `json:"IPODate"`
+	DollarsMultiplier       float64    `json:"DollarsMultiplier"`
+	CumulativeDistribution  float64    `json:"CumulativeDistribution"`
+	AverageDailyVolume      int        `json:"AverageDailyVolume"`
+	EOM                     FlexBool   `json:"EOM"`
+	EOQ                     FlexBool   `json:"EOQ"`
+	EOY                     FlexBool   `json:"EOY"`
+	OPEX                    FlexBool   `json:"OPEX"`
+	VOLEX                   FlexBool   `json:"VOLEX"`
+	InsideBar               FlexBool   `json:"InsideBar"`
+	DoubleInsideBar         FlexBool   `json:"DoubleInsideBar"`
+	TotalRows               int        `json:"TotalRows"`
+	ExternalFeed            FlexBool   `json:"ExternalFeed"`
 }
 
 // TradeCluster represents a VolumeLeaders trade cluster row.
 type TradeCluster struct {
-	Date                           AspNetDate `json:"Date"`
-	DateKey                        int        `json:"DateKey"`
-	SecurityKey                    int        `json:"SecurityKey"`
-	Ticker                         string     `json:"Ticker"`
-	Sector                         string     `json:"Sector"`
-	Industry                       string     `json:"Industry"`
-	Name                           string     `json:"Name"`
-	MinFullDateTime                string     `json:"MinFullDateTime"`
-	MaxFullDateTime                string     `json:"MaxFullDateTime"`
-	MinFullTimeString24            string     `json:"MinFullTimeString24"`
-	MaxFullTimeString24            string     `json:"MaxFullTimeString24"`
+	clusterBase
+
 	Price                          float64    `json:"Price"`
-	ClosePrice                     float64    `json:"ClosePrice"`
-	Dollars                        float64    `json:"Dollars"`
-	AverageBlockSizeShares         int        `json:"AverageBlockSizeShares"`
-	AverageBlockSizeDollars        float64    `json:"AverageBlockSizeDollars"`
-	Volume                         int        `json:"Volume"`
-	TradeCount                     int        `json:"TradeCount"`
 	LastComparibleTradeClusterDate AspNetDate `json:"LastComparibleTradeClusterDate"`
-	IPODate                        AspNetDate `json:"IPODate"`
-	DollarsMultiplier              float64    `json:"DollarsMultiplier"`
-	CumulativeDistribution         float64    `json:"CumulativeDistribution"`
 	TradeClusterRank               int        `json:"TradeClusterRank"`
-	AverageDailyVolume             int        `json:"AverageDailyVolume"`
-	EOM                            FlexBool   `json:"EOM"`
-	EOQ                            FlexBool   `json:"EOQ"`
-	EOY                            FlexBool   `json:"EOY"`
-	OPEX                           FlexBool   `json:"OPEX"`
-	VOLEX                          FlexBool   `json:"VOLEX"`
-	InsideBar                      FlexBool   `json:"InsideBar"`
-	DoubleInsideBar                FlexBool   `json:"DoubleInsideBar"`
-	TotalRows                      int        `json:"TotalRows"`
-	ExternalFeed                   FlexBool   `json:"ExternalFeed"`
 }
 
 // TradeClusterBomb represents a VolumeLeaders trade cluster bomb row.
 type TradeClusterBomb struct {
-	Date                               AspNetDate `json:"Date"`
-	DateKey                            int        `json:"DateKey"`
-	SecurityKey                        int        `json:"SecurityKey"`
-	Ticker                             string     `json:"Ticker"`
-	Sector                             string     `json:"Sector"`
-	Industry                           string     `json:"Industry"`
-	Name                               string     `json:"Name"`
-	MinFullDateTime                    string     `json:"MinFullDateTime"`
-	MaxFullDateTime                    string     `json:"MaxFullDateTime"`
-	MinFullTimeString24                string     `json:"MinFullTimeString24"`
-	MaxFullTimeString24                string     `json:"MaxFullTimeString24"`
-	ClosePrice                         float64    `json:"ClosePrice"`
-	Dollars                            float64    `json:"Dollars"`
-	AverageBlockSizeShares             int        `json:"AverageBlockSizeShares"`
-	AverageBlockSizeDollars            float64    `json:"AverageBlockSizeDollars"`
-	Volume                             int        `json:"Volume"`
-	TradeCount                         int        `json:"TradeCount"`
+	clusterBase
+
 	LastComparableTradeClusterBombDate AspNetDate `json:"LastComparableTradeClusterBombDate"`
-	IPODate                            AspNetDate `json:"IPODate"`
-	DollarsMultiplier                  float64    `json:"DollarsMultiplier"`
-	CumulativeDistribution             float64    `json:"CumulativeDistribution"`
 	TradeClusterBombRank               int        `json:"TradeClusterBombRank"`
-	AverageDailyVolume                 int        `json:"AverageDailyVolume"`
-	EOM                                FlexBool   `json:"EOM"`
-	EOQ                                FlexBool   `json:"EOQ"`
-	EOY                                FlexBool   `json:"EOY"`
-	OPEX                               FlexBool   `json:"OPEX"`
-	VOLEX                              FlexBool   `json:"VOLEX"`
-	InsideBar                          FlexBool   `json:"InsideBar"`
-	DoubleInsideBar                    FlexBool   `json:"DoubleInsideBar"`
-	TotalRows                          int        `json:"TotalRows"`
-	ExternalFeed                       FlexBool   `json:"ExternalFeed"`
 }
 
 // GetTradeClusters posts a typed DataTables request to
@@ -104,18 +73,7 @@ func (c *Client) GetTradeClusters(
 	ctx context.Context,
 	req TradeClustersRequest,
 ) (*DataTablesResponse[TradeCluster], error) {
-	var result DataTablesResponse[TradeCluster]
-	if err := c.postDataTables(
-		ctx,
-		TradeClustersGetTradeClustersPath,
-		req.DataTables,
-		req.Filters,
-		TradeClustersColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[TradeCluster](ctx, c, TradeClustersGetTradeClustersPath, req, TradeClustersColumns())
 }
 
 // GetTradeClusterBombs posts a typed DataTables request to
@@ -124,18 +82,9 @@ func (c *Client) GetTradeClusterBombs(
 	ctx context.Context,
 	req TradeClusterBombsRequest,
 ) (*DataTablesResponse[TradeClusterBomb], error) {
-	var result DataTablesResponse[TradeClusterBomb]
-	if err := c.postDataTables(
-		ctx,
-		TradeClusterBombsGetTradeClusterBombsPath,
-		req.DataTables,
-		req.Filters,
-		TradeClusterBombsColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[TradeClusterBomb](
+		ctx, c, TradeClusterBombsGetTradeClusterBombsPath, req, TradeClusterBombsColumns(),
+	)
 }
 
 // GetTradeClustersLimit fetches up to limit trade clusters by paging through
@@ -145,15 +94,7 @@ func (c *Client) GetTradeClustersLimit(
 	req TradeClustersRequest,
 	limit int,
 ) ([]TradeCluster, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[TradeCluster], error) {
-			req.DataTables = dt
-			return c.GetTradeClusters(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetTradeClusters)
 }
 
 // GetTradeClusterBombsLimit fetches up to limit trade cluster bombs by paging
@@ -164,15 +105,7 @@ func (c *Client) GetTradeClusterBombsLimit(
 	req TradeClusterBombsRequest,
 	limit int,
 ) ([]TradeClusterBomb, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[TradeClusterBomb], error) {
-			req.DataTables = dt
-			return c.GetTradeClusterBombs(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetTradeClusterBombs)
 }
 
 // TradeClustersColumns returns the DataTables columns captured from the trade

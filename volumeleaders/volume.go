@@ -1,9 +1,6 @@
 package volumeleaders
 
-import (
-	"context"
-	"net/url"
-)
+import "context"
 
 // Browser endpoint paths for volume leaderboard APIs used by VolumeLeaders.
 const (
@@ -14,10 +11,7 @@ const (
 
 // VolumeRequest contains DataTables paging and optional endpoint filters for
 // volume leaderboard endpoints.
-type VolumeRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type VolumeRequest = EndpointRequest
 
 // GetInstitutionalVolume posts a typed DataTables request to
 // /InstitutionalVolume/GetInstitutionalVolume.
@@ -25,12 +19,7 @@ func (c *Client) GetInstitutionalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return c.getVolume(
-		ctx,
-		InstitutionalVolumeGetInstitutionalVolumePath,
-		req,
-		InstitutionalVolumeColumns(),
-	)
+	return getEndpoint[Trade](ctx, c, InstitutionalVolumeGetInstitutionalVolumePath, req, InstitutionalVolumeColumns())
 }
 
 // GetAHInstitutionalVolume posts a typed DataTables request to
@@ -39,11 +28,8 @@ func (c *Client) GetAHInstitutionalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return c.getVolume(
-		ctx,
-		AHInstitutionalVolumeGetAHInstitutionalVolumePath,
-		req,
-		AHInstitutionalVolumeColumns(),
+	return getEndpoint[Trade](
+		ctx, c, AHInstitutionalVolumeGetAHInstitutionalVolumePath, req, AHInstitutionalVolumeColumns(),
 	)
 }
 
@@ -53,7 +39,7 @@ func (c *Client) GetTotalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return c.getVolume(ctx, TotalVolumeGetTotalVolumePath, req, TotalVolumeColumns())
+	return getEndpoint[Trade](ctx, c, TotalVolumeGetTotalVolumePath, req, TotalVolumeColumns())
 }
 
 // GetInstitutionalVolumeLimit fetches up to limit trades by paging through
@@ -64,15 +50,7 @@ func (c *Client) GetInstitutionalVolumeLimit(
 	req VolumeRequest,
 	limit int,
 ) ([]Trade, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
-			req.DataTables = dt
-			return c.GetInstitutionalVolume(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetInstitutionalVolume)
 }
 
 // GetAHInstitutionalVolumeLimit fetches up to limit trades by paging through
@@ -83,15 +61,7 @@ func (c *Client) GetAHInstitutionalVolumeLimit(
 	req VolumeRequest,
 	limit int,
 ) ([]Trade, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
-			req.DataTables = dt
-			return c.GetAHInstitutionalVolume(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetAHInstitutionalVolume)
 }
 
 // GetTotalVolumeLimit fetches up to limit trades by paging through
@@ -101,137 +71,41 @@ func (c *Client) GetTotalVolumeLimit(
 	req VolumeRequest,
 	limit int,
 ) ([]Trade, error) {
-	return fetchLimit(
-		ctx,
-		limit,
-		req.DataTables,
-		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
-			req.DataTables = dt
-			return c.GetTotalVolume(ctx, req)
-		},
-	)
+	return getEndpointLimit(ctx, req, limit, c.GetTotalVolume)
+}
+
+// volumeColumns builds a column set for volume leaderboard endpoints. All three
+// share the same leading (Ticker, Price, Sector, Industry) and trailing
+// (LastTradeDate) columns; only the three middle metric columns differ.
+func volumeColumns(volume, dollars, rank string) []DataTablesColumn {
+	return []DataTablesColumn{
+		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
+		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
+		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
+		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
+		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
+		{Data: volume, Name: volume, Searchable: true, Orderable: true},
+		{Data: dollars, Name: dollars, Searchable: true, Orderable: true},
+		{Data: rank, Name: rank, Searchable: true, Orderable: true},
+		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
+		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
+	}
 }
 
 // InstitutionalVolumeColumns returns the DataTables columns used by the
 // institutional volume leaderboard endpoints.
 func InstitutionalVolumeColumns() []DataTablesColumn {
-	return []DataTablesColumn{
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
-		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
-		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{
-			Data:       "TotalInstitutionalVolume",
-			Name:       "TotalInstitutionalVolume",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       "TotalInstitutionalDollars",
-			Name:       "TotalInstitutionalDollars",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       columnTotalInstitutionalDollarsRank,
-			Name:       columnTotalInstitutionalDollarsRank,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-	}
+	return volumeColumns("TotalInstitutionalVolume", "TotalInstitutionalDollars", columnTotalInstitutionalDollarsRank)
 }
 
 // AHInstitutionalVolumeColumns returns the DataTables columns used by the
 // after-hours institutional volume leaderboard endpoint.
 func AHInstitutionalVolumeColumns() []DataTablesColumn {
-	return []DataTablesColumn{
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
-		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
-		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{
-			Data:       "AHInstitutionalVolume",
-			Name:       "AHInstitutionalVolume",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       "AHInstitutionalDollars",
-			Name:       "AHInstitutionalDollars",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       "AHInstitutionalDollarsRank",
-			Name:       "AHInstitutionalDollarsRank",
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-	}
+	return volumeColumns("AHInstitutionalVolume", "AHInstitutionalDollars", "AHInstitutionalDollarsRank")
 }
 
 // TotalVolumeColumns returns the DataTables columns used by the total volume
 // leaderboard endpoint.
 func TotalVolumeColumns() []DataTablesColumn {
-	return []DataTablesColumn{
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
-		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
-		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
-		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{Data: "TotalVolume", Name: "TotalVolume", Searchable: true, Orderable: true},
-		{Data: "TotalDollars", Name: "TotalDollars", Searchable: true, Orderable: true},
-		{Data: "TotalDollarsRank", Name: "TotalDollarsRank", Searchable: true, Orderable: true},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-		{
-			Data:       tradeColumnLastTradeDate,
-			Name:       tradeColumnLastTradeDate,
-			Searchable: true,
-			Orderable:  true,
-		},
-	}
-}
-
-func (c *Client) getVolume(
-	ctx context.Context,
-	path string,
-	req VolumeRequest,
-	columns []DataTablesColumn,
-) (*DataTablesResponse[Trade], error) {
-	var result DataTablesResponse[Trade]
-	if err := c.postDataTables(ctx, path, req.DataTables, req.Filters, columns, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return volumeColumns("TotalVolume", "TotalDollars", "TotalDollarsRank")
 }

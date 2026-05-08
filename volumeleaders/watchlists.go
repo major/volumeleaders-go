@@ -17,17 +17,11 @@ const (
 
 // WatchListsRequest contains DataTables paging and optional endpoint filters
 // for /WatchListConfigs/GetWatchLists.
-type WatchListsRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type WatchListsRequest = EndpointRequest
 
 // WatchListTickersRequest contains DataTables paging and optional endpoint
 // filters for /WatchLists/GetWatchListTickers.
-type WatchListTickersRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type WatchListTickersRequest = EndpointRequest
 
 // SaveWatchListConfigRequest contains the multipart form fields submitted to
 // /WatchListConfig when creating or editing a watchlist.
@@ -153,18 +147,7 @@ func (c *Client) GetWatchLists(
 	ctx context.Context,
 	req WatchListsRequest,
 ) (*DataTablesResponse[WatchListConfig], error) {
-	var result DataTablesResponse[WatchListConfig]
-	if err := c.postDataTables(
-		ctx,
-		WatchListConfigsGetWatchListsPath,
-		req.DataTables,
-		req.Filters,
-		WatchListsColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[WatchListConfig](ctx, c, WatchListConfigsGetWatchListsPath, req, WatchListsColumns())
 }
 
 // GetWatchListTickers posts a typed DataTables request to
@@ -173,24 +156,13 @@ func (c *Client) GetWatchListTickers(
 	ctx context.Context,
 	req WatchListTickersRequest,
 ) (*DataTablesResponse[WatchListTicker], error) {
-	var result DataTablesResponse[WatchListTicker]
-	if err := c.postDataTables(
-		ctx,
-		WatchListsGetWatchListTickersPath,
-		req.DataTables,
-		req.Filters,
-		WatchListTickersColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[WatchListTicker](ctx, c, WatchListsGetWatchListTickersPath, req, WatchListTickersColumns())
 }
 
 // SaveWatchListConfig posts a multipart create or edit request to
 // /WatchListConfig.
 func (c *Client) SaveWatchListConfig(ctx context.Context, req SaveWatchListConfigRequest) error {
-	return c.postMultipartForm(ctx, WatchListConfigPath, cloneValues(req.Fields), nil)
+	return c.postMultipartForm(ctx, WatchListConfigPath, mergeValues(req.Fields, nil), nil)
 }
 
 // AddTickerToWatchList posts a chart-page watchlist update request that adds a

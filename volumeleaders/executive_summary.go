@@ -3,7 +3,6 @@ package volumeleaders
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -35,17 +34,11 @@ type ExhaustionScores struct {
 
 // WelcomeTradesRequest contains DataTables paging and optional endpoint filters
 // for /ExecutiveSummary/GetWelcomeTrades.
-type WelcomeTradesRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type WelcomeTradesRequest = EndpointRequest
 
 // WelcomeTradeClustersRequest contains DataTables paging and optional endpoint
 // filters for /ExecutiveSummary/GetWelcomeTradeClusters.
-type WelcomeTradeClustersRequest struct {
-	DataTables DataTablesRequest
-	Filters    url.Values
-}
+type WelcomeTradeClustersRequest = EndpointRequest
 
 // GetExhaustionScores posts a JSON request to
 // /ExecutiveSummary/GetExhaustionScores.
@@ -66,18 +59,7 @@ func (c *Client) GetWelcomeTrades(
 	ctx context.Context,
 	req WelcomeTradesRequest,
 ) (*DataTablesResponse[Trade], error) {
-	var result DataTablesResponse[Trade]
-	if err := c.postDataTables(
-		ctx,
-		ExecutiveSummaryGetWelcomeTradesPath,
-		req.DataTables,
-		req.Filters,
-		WelcomeTradesColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[Trade](ctx, c, ExecutiveSummaryGetWelcomeTradesPath, req, WelcomeTradesColumns())
 }
 
 // GetWelcomeTradeClusters posts a typed DataTables request to
@@ -86,18 +68,9 @@ func (c *Client) GetWelcomeTradeClusters(
 	ctx context.Context,
 	req WelcomeTradeClustersRequest,
 ) (*DataTablesResponse[TradeCluster], error) {
-	var result DataTablesResponse[TradeCluster]
-	if err := c.postDataTables(
-		ctx,
-		ExecutiveSummaryGetWelcomeTradeClustersPath,
-		req.DataTables,
-		req.Filters,
-		WelcomeTradeClustersColumns(),
-		&result,
-	); err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return getEndpoint[TradeCluster](
+		ctx, c, ExecutiveSummaryGetWelcomeTradeClustersPath, req, WelcomeTradeClustersColumns(),
+	)
 }
 
 // GetAllSnapshots posts a JSON null request to /Trades/GetAllSnapshots and
