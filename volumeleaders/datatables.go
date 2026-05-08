@@ -1,6 +1,8 @@
 package volumeleaders
 
 import (
+	"context"
+	"math"
 	"net/url"
 	"strconv"
 )
@@ -100,4 +102,62 @@ func EncodeDataTablesRequest(req DataTablesRequest) url.Values {
 		}
 	}
 	return values
+}
+
+// fetchLimit pages through a DataTables endpoint, collecting up to limit
+// records. When limit is zero or negative the helper fetches all available
+// records using the server-reported RecordsFiltered count as the stop
+// condition.
+func fetchLimit[T any](
+	ctx context.Context,
+	limit int,
+	dt DataTablesRequest,
+	fetch func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[T], error),
+) ([]T, error) {
+	if limit <= 0 {
+		limit = math.MaxInt
+	}
+
+	pageLength := dt.Length
+	if pageLength <= 0 || pageLength > limit {
+		pageLength = min(limit, defaultDataTablesLength)
+	}
+
+	items := make([]T, 0, min(limit, pageLength))
+	start := dt.Start
+	draw := dt.Draw
+	if draw <= 0 {
+		draw = 1
+	}
+
+	for len(items) < limit {
+		remaining := limit - len(items)
+		length := min(pageLength, remaining)
+
+		pageDT := dt
+		pageDT.Start = start
+		pageDT.Length = length
+		pageDT.Draw = draw
+
+		resp, err := fetch(ctx, pageDT)
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.Data) == 0 {
+			break
+		}
+
+		data := resp.Data
+		if len(data) > remaining {
+			data = data[:remaining]
+		}
+		items = append(items, data...)
+		start += len(resp.Data)
+		draw++
+
+		if len(resp.Data) < length || (resp.RecordsFiltered > 0 && start >= resp.RecordsFiltered) {
+			break
+		}
+	}
+	return items, nil
 }

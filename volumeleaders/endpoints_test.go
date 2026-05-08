@@ -2,11 +2,14 @@ package volumeleaders
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1046,4 +1049,265 @@ func TestGetTradeClusterBombsPostsCapturedColumns(t *testing.T) {
 	for key, want := range checks {
 		assert.Equal(t, want, form.Get(key), "GetTradeClusterBombs() form[%q]", key)
 	}
+}
+
+// paginatingHandler returns an HTTP handler that serves paginated DataTables
+// responses from a slice of JSON object strings.
+func paginatingHandler(t *testing.T, items []string) http.HandlerFunc {
+	t.Helper()
+	total := len(items)
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if !assert.NoError(t, err, "ReadAll(paginating request body)") {
+			return
+		}
+		form, err := url.ParseQuery(string(body))
+		if !assert.NoError(t, err, "ParseQuery(paginating request body)") {
+			return
+		}
+		start, err := strconv.Atoi(form.Get("start"))
+		if !assert.NoError(t, err, "Atoi(start)") {
+			return
+		}
+		length, err := strconv.Atoi(form.Get("length"))
+		if !assert.NoError(t, err, "Atoi(length)") {
+			return
+		}
+		end := start + length
+		if start >= total {
+			start = total
+			end = total
+		}
+		if end > total {
+			end = total
+		}
+		page := items[start:end]
+		w.Header().Set("Content-Type", "application/json")
+		_, err = fmt.Fprintf(w,
+			`{"draw":1,"recordsTotal":%d,"recordsFiltered":%d,"data":[%s]}`,
+			total, total, strings.Join(page, ","),
+		)
+		assert.NoError(t, err, "Fprintf(paginating response)")
+	}
+}
+
+func TestGetLimitMethodsPageThroughResults(t *testing.T) {
+	t.Run("GetTradeClustersLimit", func(t *testing.T) {
+		items := []string{
+			`{"Ticker":"AAPL","TradeClusterRank":1,"TradeCount":3}`,
+			`{"Ticker":"MSFT","TradeClusterRank":2,"TradeCount":5}`,
+			`{"Ticker":"NVDA","TradeClusterRank":3,"TradeCount":7}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetTradeClustersLimit(context.Background(), TradeClustersRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 2)
+
+		require.NoError(t, err, "GetTradeClustersLimit(limit 2)")
+		assert.Len(t, results, 2, "GetTradeClustersLimit(limit 2) results")
+		assert.Equal(t, "AAPL", results[0].Ticker, "GetTradeClustersLimit() first ticker")
+	})
+
+	t.Run("GetTradeClustersLimit fetches all", func(t *testing.T) {
+		items := []string{
+			`{"Ticker":"AAPL","TradeClusterRank":1,"TradeCount":3}`,
+			`{"Ticker":"MSFT","TradeClusterRank":2,"TradeCount":5}`,
+			`{"Ticker":"NVDA","TradeClusterRank":3,"TradeCount":7}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetTradeClustersLimit(context.Background(), TradeClustersRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 0)
+
+		require.NoError(t, err, "GetTradeClustersLimit(limit 0)")
+		assert.Len(t, results, 3, "GetTradeClustersLimit(limit 0) results")
+	})
+
+	t.Run("GetTradeClusterBombsLimit", func(t *testing.T) {
+		items := []string{
+			`{"Ticker":"AAPL","TradeClusterBombRank":1,"TradeCount":10}`,
+			`{"Ticker":"MSFT","TradeClusterBombRank":2,"TradeCount":8}`,
+			`{"Ticker":"NVDA","TradeClusterBombRank":3,"TradeCount":6}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetTradeClusterBombsLimit(context.Background(), TradeClusterBombsRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 2)
+
+		require.NoError(t, err, "GetTradeClusterBombsLimit(limit 2)")
+		assert.Len(t, results, 2, "GetTradeClusterBombsLimit(limit 2) results")
+		assert.Equal(t, 1, results[0].TradeClusterBombRank, "GetTradeClusterBombsLimit() first rank")
+	})
+
+	t.Run("GetInstitutionalVolumeLimit", func(t *testing.T) {
+		items := []string{
+			`{"Ticker":"AAPL","TotalInstitutionalVolume":1000}`,
+			`{"Ticker":"MSFT","TotalInstitutionalVolume":2000}`,
+			`{"Ticker":"NVDA","TotalInstitutionalVolume":3000}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetInstitutionalVolumeLimit(context.Background(), VolumeRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 2)
+
+		require.NoError(t, err, "GetInstitutionalVolumeLimit(limit 2)")
+		assert.Len(t, results, 2, "GetInstitutionalVolumeLimit(limit 2) results")
+		assert.Equal(t, "AAPL", results[0].Ticker, "GetInstitutionalVolumeLimit() first ticker")
+	})
+
+	t.Run("GetAHInstitutionalVolumeLimit", func(t *testing.T) {
+		items := []string{
+			`{"Ticker":"AAPL","AHInstitutionalVolume":500}`,
+			`{"Ticker":"MSFT","AHInstitutionalVolume":600}`,
+			`{"Ticker":"NVDA","AHInstitutionalVolume":700}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetAHInstitutionalVolumeLimit(context.Background(), VolumeRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 2)
+
+		require.NoError(t, err, "GetAHInstitutionalVolumeLimit(limit 2)")
+		assert.Len(t, results, 2, "GetAHInstitutionalVolumeLimit(limit 2) results")
+		assert.Equal(t, 500, results[0].AHInstitutionalVolume, "GetAHInstitutionalVolumeLimit() first volume")
+	})
+
+	t.Run("GetTotalVolumeLimit", func(t *testing.T) {
+		items := []string{
+			`{"Ticker":"AAPL","TotalVolume":10000}`,
+			`{"Ticker":"MSFT","TotalVolume":20000}`,
+			`{"Ticker":"NVDA","TotalVolume":30000}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetTotalVolumeLimit(context.Background(), VolumeRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 2)
+
+		require.NoError(t, err, "GetTotalVolumeLimit(limit 2)")
+		assert.Len(t, results, 2, "GetTotalVolumeLimit(limit 2) results")
+		assert.Equal(t, 10000, results[0].TotalVolume, "GetTotalVolumeLimit() first volume")
+	})
+
+	t.Run("GetAlertConfigsLimit", func(t *testing.T) {
+		items := []string{
+			`{"AlertConfigKey":1,"Name":"config-1"}`,
+			`{"AlertConfigKey":2,"Name":"config-2"}`,
+			`{"AlertConfigKey":3,"Name":"config-3"}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetAlertConfigsLimit(context.Background(), AlertConfigsRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 2)
+
+		require.NoError(t, err, "GetAlertConfigsLimit(limit 2)")
+		assert.Len(t, results, 2, "GetAlertConfigsLimit(limit 2) results")
+		assert.Equal(t, 1, results[0].AlertConfigKey, "GetAlertConfigsLimit() first key")
+	})
+
+	t.Run("GetTradeAlertsLimit", func(t *testing.T) {
+		items := []string{
+			`{"Ticker":"AAPL","TradeID":1,"AlertType":"Trade"}`,
+			`{"Ticker":"MSFT","TradeID":2,"AlertType":"Trade"}`,
+			`{"Ticker":"NVDA","TradeID":3,"AlertType":"Trade"}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetTradeAlertsLimit(context.Background(), TradeAlertsRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 2)
+
+		require.NoError(t, err, "GetTradeAlertsLimit(limit 2)")
+		assert.Len(t, results, 2, "GetTradeAlertsLimit(limit 2) results")
+		assert.Equal(t, int64(1), results[0].TradeID, "GetTradeAlertsLimit() first trade ID")
+	})
+
+	t.Run("GetTradeClusterAlertsLimit", func(t *testing.T) {
+		items := []string{
+			`{"Ticker":"AAPL","TradeClusterRank":1}`,
+			`{"Ticker":"MSFT","TradeClusterRank":2}`,
+			`{"Ticker":"NVDA","TradeClusterRank":3}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetTradeClusterAlertsLimit(context.Background(), TradeClusterAlertsRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 2)
+
+		require.NoError(t, err, "GetTradeClusterAlertsLimit(limit 2)")
+		assert.Len(t, results, 2, "GetTradeClusterAlertsLimit(limit 2) results")
+		assert.Equal(t, 1, results[0].TradeClusterRank, "GetTradeClusterAlertsLimit() first rank")
+	})
+
+	t.Run("GetEarningsLimit", func(t *testing.T) {
+		items := []string{
+			`{"Ticker":"AAPL","Current":190.5,"TradeCount":5}`,
+			`{"Ticker":"MSFT","Current":420.0,"TradeCount":3}`,
+			`{"Ticker":"NVDA","Current":130.0,"TradeCount":7}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetEarningsLimit(context.Background(), EarningsRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 2)
+
+		require.NoError(t, err, "GetEarningsLimit(limit 2)")
+		assert.Len(t, results, 2, "GetEarningsLimit(limit 2) results")
+		assert.Equal(t, "AAPL", results[0].Ticker, "GetEarningsLimit() first ticker")
+	})
+
+	t.Run("GetTradeLevelTouchesLimit", func(t *testing.T) {
+		items := []string{
+			`{"Ticker":"AAPL","Price":190.5,"TradeLevelRank":1}`,
+			`{"Ticker":"MSFT","Price":420.0,"TradeLevelRank":2}`,
+			`{"Ticker":"NVDA","Price":130.0,"TradeLevelRank":3}`,
+		}
+		server := httptest.NewServer(paginatingHandler(t, items))
+		t.Cleanup(server.Close)
+		client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
+		require.NoError(t, err, "NewClient()")
+
+		results, err := client.GetTradeLevelTouchesLimit(context.Background(), TradeLevelTouchesRequest{
+			DataTables: DataTablesRequest{Length: 2},
+		}, 2)
+
+		require.NoError(t, err, "GetTradeLevelTouchesLimit(limit 2)")
+		assert.Len(t, results, 2, "GetTradeLevelTouchesLimit(limit 2) results")
+		assert.Equal(t, 1, results[0].TradeLevelRank, "GetTradeLevelTouchesLimit() first rank")
+	})
 }

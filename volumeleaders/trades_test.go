@@ -282,14 +282,60 @@ func TestGetTradesLimitFetchesBoundedPages(t *testing.T) {
 	)
 }
 
-func TestGetTradesLimitRequiresPositiveLimit(t *testing.T) {
-	client, err := NewClient(Session{})
+func TestGetTradesLimitFetchesAllRecords(t *testing.T) {
+	allTrades := []Trade{
+		{Ticker: "AXP", TradeID: 1},
+		{Ticker: "MSFT", TradeID: 2},
+		{Ticker: "NVDA", TradeID: 3},
+		{Ticker: "AMD", TradeID: 4},
+		{Ticker: "TSLA", TradeID: 5},
+	}
+	var requestCount int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if !assert.NoError(t, err, "ReadAll(request body)") {
+			return
+		}
+		form, err := url.ParseQuery(string(body))
+		if !assert.NoError(t, err, "ParseQuery(request body)") {
+			return
+		}
+		requestCount++
+
+		start, err := strconv.Atoi(form.Get("start"))
+		if !assert.NoError(t, err, "Atoi(start)") {
+			return
+		}
+		length, err := strconv.Atoi(form.Get("length"))
+		if !assert.NoError(t, err, "Atoi(length)") {
+			return
+		}
+		end := min(start+length, len(allTrades))
+		if start > end {
+			start = end
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, err = fmt.Fprintf(w,
+			`{"draw":1,"recordsTotal":%d,"recordsFiltered":%d,"data":%s}`,
+			len(allTrades), len(allTrades), mustMarshalJSON(t, allTrades[start:end]),
+		)
+		assert.NoError(t, err, "Fprintf(response)")
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
 	require.NoError(t, err, "NewClient()")
 
-	trades, err := client.GetTradesLimit(context.Background(), TradesRequest{}, 0)
+	trades, err := client.GetTradesLimit(context.Background(), TradesRequest{
+		DataTables: DataTablesRequest{Length: 2},
+	}, 0)
 
-	assert.Nil(t, trades, "GetTradesLimit(limit 0) trades")
-	assert.Error(t, err, "GetTradesLimit(limit 0) error")
+	require.NoError(t, err, "GetTradesLimit(limit 0)")
+	assert.Len(t, trades, 5, "GetTradesLimit(limit 0) trades")
+	assert.Greater(t, requestCount, 1, "GetTradesLimit(limit 0) paginated")
+	assert.Equal(t, "TSLA", trades[4].Ticker, "GetTradesLimit(limit 0) last ticker")
 }
 
 func TestListTradesMapsTypedQuery(t *testing.T) {
@@ -426,15 +472,29 @@ func TestListTradesLimitUsesTypedQuery(t *testing.T) {
 	assert.Equal(t, []string{"AXP", "MSFT"}, []string{trades[0].Ticker, trades[1].Ticker}, "ListTradesLimit() tickers")
 }
 
-func TestListTradesLimitRejectsInvalidLimit(t *testing.T) {
-	client, err := NewClient(Session{})
+func TestListTradesLimitFetchesAllRecords(t *testing.T) {
+	allTrades := []Trade{{Ticker: "AXP", TradeID: 1}, {Ticker: "MSFT", TradeID: 2}}
+	var requestCount int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requestCount++
+		w.Header().Set("Content-Type", "application/json")
+		_, err := fmt.Fprintf(w,
+			`{"draw":1,"recordsTotal":%d,"recordsFiltered":%d,"data":%s}`,
+			len(allTrades), len(allTrades), mustMarshalJSON(t, allTrades),
+		)
+		assert.NoError(t, err, "Fprintf(response)")
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := NewClient(Session{}, WithBaseURL(server.URL), WithHTTPClient(server.Client()))
 	require.NoError(t, err, "NewClient()")
 
-	_, err = client.ListTradesLimit(context.Background(), TradeQuery{}, 0)
+	trades, err := client.ListTradesLimit(context.Background(), TradeQuery{}, 0)
 
-	require.Error(t, err, "ListTradesLimit(invalid limit)")
-	require.ErrorIs(t, err, ErrInvalidQuery, "ListTradesLimit(invalid limit) error")
-	assert.True(t, IsInvalidQuery(err), "IsInvalidQuery(ListTradesLimit error)")
+	require.NoError(t, err, "ListTradesLimit(limit 0)")
+	assert.Len(t, trades, 2, "ListTradesLimit(limit 0) trades")
+	assert.Equal(t, 1, requestCount, "ListTradesLimit(limit 0) single page sufficient")
 }
 
 func TestClientBlocksCrossOriginRedirects(t *testing.T) {

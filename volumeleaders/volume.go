@@ -25,7 +25,12 @@ func (c *Client) GetInstitutionalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return c.getVolume(ctx, InstitutionalVolumeGetInstitutionalVolumePath, req, InstitutionalVolumeColumns())
+	return c.getVolume(
+		ctx,
+		InstitutionalVolumeGetInstitutionalVolumePath,
+		req,
+		InstitutionalVolumeColumns(),
+	)
 }
 
 // GetAHInstitutionalVolume posts a typed DataTables request to
@@ -34,13 +39,77 @@ func (c *Client) GetAHInstitutionalVolume(
 	ctx context.Context,
 	req VolumeRequest,
 ) (*DataTablesResponse[Trade], error) {
-	return c.getVolume(ctx, AHInstitutionalVolumeGetAHInstitutionalVolumePath, req, AHInstitutionalVolumeColumns())
+	return c.getVolume(
+		ctx,
+		AHInstitutionalVolumeGetAHInstitutionalVolumePath,
+		req,
+		AHInstitutionalVolumeColumns(),
+	)
 }
 
 // GetTotalVolume posts a typed DataTables request to
 // /TotalVolume/GetTotalVolume.
-func (c *Client) GetTotalVolume(ctx context.Context, req VolumeRequest) (*DataTablesResponse[Trade], error) {
+func (c *Client) GetTotalVolume(
+	ctx context.Context,
+	req VolumeRequest,
+) (*DataTablesResponse[Trade], error) {
 	return c.getVolume(ctx, TotalVolumeGetTotalVolumePath, req, TotalVolumeColumns())
+}
+
+// GetInstitutionalVolumeLimit fetches up to limit trades by paging through
+// GetInstitutionalVolume. A zero or negative limit fetches all available
+// records.
+func (c *Client) GetInstitutionalVolumeLimit(
+	ctx context.Context,
+	req VolumeRequest,
+	limit int,
+) ([]Trade, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
+			req.DataTables = dt
+			return c.GetInstitutionalVolume(ctx, req)
+		},
+	)
+}
+
+// GetAHInstitutionalVolumeLimit fetches up to limit trades by paging through
+// GetAHInstitutionalVolume. A zero or negative limit fetches all available
+// records.
+func (c *Client) GetAHInstitutionalVolumeLimit(
+	ctx context.Context,
+	req VolumeRequest,
+	limit int,
+) ([]Trade, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
+			req.DataTables = dt
+			return c.GetAHInstitutionalVolume(ctx, req)
+		},
+	)
+}
+
+// GetTotalVolumeLimit fetches up to limit trades by paging through
+// GetTotalVolume. A zero or negative limit fetches all available records.
+func (c *Client) GetTotalVolumeLimit(
+	ctx context.Context,
+	req VolumeRequest,
+	limit int,
+) ([]Trade, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
+			req.DataTables = dt
+			return c.GetTotalVolume(ctx, req)
+		},
+	)
 }
 
 // InstitutionalVolumeColumns returns the DataTables columns used by the
@@ -52,16 +121,36 @@ func InstitutionalVolumeColumns() []DataTablesColumn {
 		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
 		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
 		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{Data: "TotalInstitutionalVolume", Name: "TotalInstitutionalVolume", Searchable: true, Orderable: true},
-		{Data: "TotalInstitutionalDollars", Name: "TotalInstitutionalDollars", Searchable: true, Orderable: true},
+		{
+			Data:       "TotalInstitutionalVolume",
+			Name:       "TotalInstitutionalVolume",
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       "TotalInstitutionalDollars",
+			Name:       "TotalInstitutionalDollars",
+			Searchable: true,
+			Orderable:  true,
+		},
 		{
 			Data:       columnTotalInstitutionalDollarsRank,
 			Name:       columnTotalInstitutionalDollarsRank,
 			Searchable: true,
 			Orderable:  true,
 		},
-		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
-		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
+		{
+			Data:       tradeColumnLastTradeDate,
+			Name:       tradeColumnLastTradeDate,
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       tradeColumnLastTradeDate,
+			Name:       tradeColumnLastTradeDate,
+			Searchable: true,
+			Orderable:  true,
+		},
 	}
 }
 
@@ -74,11 +163,36 @@ func AHInstitutionalVolumeColumns() []DataTablesColumn {
 		{Data: columnPrice, Name: columnPrice, Searchable: true, Orderable: true},
 		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
 		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
-		{Data: "AHInstitutionalVolume", Name: "AHInstitutionalVolume", Searchable: true, Orderable: true},
-		{Data: "AHInstitutionalDollars", Name: "AHInstitutionalDollars", Searchable: true, Orderable: true},
-		{Data: "AHInstitutionalDollarsRank", Name: "AHInstitutionalDollarsRank", Searchable: true, Orderable: true},
-		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
-		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
+		{
+			Data:       "AHInstitutionalVolume",
+			Name:       "AHInstitutionalVolume",
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       "AHInstitutionalDollars",
+			Name:       "AHInstitutionalDollars",
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       "AHInstitutionalDollarsRank",
+			Name:       "AHInstitutionalDollarsRank",
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       tradeColumnLastTradeDate,
+			Name:       tradeColumnLastTradeDate,
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       tradeColumnLastTradeDate,
+			Name:       tradeColumnLastTradeDate,
+			Searchable: true,
+			Orderable:  true,
+		},
 	}
 }
 
@@ -94,8 +208,18 @@ func TotalVolumeColumns() []DataTablesColumn {
 		{Data: "TotalVolume", Name: "TotalVolume", Searchable: true, Orderable: true},
 		{Data: "TotalDollars", Name: "TotalDollars", Searchable: true, Orderable: true},
 		{Data: "TotalDollarsRank", Name: "TotalDollarsRank", Searchable: true, Orderable: true},
-		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
-		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
+		{
+			Data:       tradeColumnLastTradeDate,
+			Name:       tradeColumnLastTradeDate,
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       tradeColumnLastTradeDate,
+			Name:       tradeColumnLastTradeDate,
+			Searchable: true,
+			Orderable:  true,
+		},
 	}
 }
 

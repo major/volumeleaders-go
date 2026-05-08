@@ -100,6 +100,43 @@ func TestFlexBoolUnmarshalJSON(t *testing.T) {
 	}
 }
 
+func TestTradeNullableStringFields(t *testing.T) {
+	t.Run("null", func(t *testing.T) {
+		raw := `{"Industry":null,"FullDateTime":null,"FullTimeString24":null}`
+		var trade Trade
+		require.NoError(t, json.Unmarshal([]byte(raw), &trade), "Unmarshal(null fields)")
+		assert.Nil(t, trade.Industry, "Trade.Industry")
+		assert.Nil(t, trade.FullDateTime, "Trade.FullDateTime")
+		assert.Nil(t, trade.FullTimeString24, "Trade.FullTimeString24")
+	})
+
+	t.Run("non-null", func(t *testing.T) {
+		raw := `{"Industry":"Consumer Finance","FullDateTime":"2026-05-01T16:20:51","FullTimeString24":"16:20:51"}`
+		var trade Trade
+		require.NoError(t, json.Unmarshal([]byte(raw), &trade), "Unmarshal(non-null fields)")
+		require.NotNil(t, trade.Industry, "Trade.Industry")
+		assert.Equal(t, "Consumer Finance", *trade.Industry, "Trade.Industry value")
+		require.NotNil(t, trade.FullDateTime, "Trade.FullDateTime")
+		assert.Equal(t, "2026-05-01T16:20:51", *trade.FullDateTime, "Trade.FullDateTime value")
+		require.NotNil(t, trade.FullTimeString24, "Trade.FullTimeString24")
+		assert.Equal(t, "16:20:51", *trade.FullTimeString24, "Trade.FullTimeString24 value")
+	})
+
+	t.Run("marshal null emits null", func(t *testing.T) {
+		trade := Trade{}
+		data, err := json.Marshal(trade)
+		require.NoError(t, err, "Marshal(zero-value Trade)")
+		var raw map[string]any
+		require.NoError(t, json.Unmarshal(data, &raw), "Unmarshal(marshaled Trade)")
+
+		for _, field := range []string{"Industry", "FullDateTime", "FullTimeString24"} {
+			val, ok := raw[field]
+			assert.True(t, ok, "marshaled JSON should contain %s field", field)
+			assert.Nil(t, val, "marshaled Trade.%s should be null", field)
+		}
+	})
+}
+
 func TestFlexBoolMarshalJSON(t *testing.T) {
 	data, err := json.Marshal(FlexBool(true))
 	require.NoError(t, err, "Marshal(FlexBool(true))")

@@ -102,7 +102,10 @@ type TradePage struct {
 }
 
 // GetTrades posts a typed DataTables request to /Trades/GetTrades.
-func (c *Client) GetTrades(ctx context.Context, req TradesRequest) (*DataTablesResponse[Trade], error) {
+func (c *Client) GetTrades(
+	ctx context.Context,
+	req TradesRequest,
+) (*DataTablesResponse[Trade], error) {
 	dtReq := req.DataTables
 	if len(dtReq.Columns) == 0 {
 		dtReq.Columns = TradesColumns()
@@ -140,63 +143,34 @@ func (c *Client) ListTrades(ctx context.Context, query TradeQuery) (*TradePage, 
 // GetTradesLimit fetches up to limit trades by making one or more paged
 // /Trades/GetTrades requests.
 //
-// The limit must be positive so callers place an explicit bound on
-// LLM-triggered or automated requests. When req.DataTables.Length is positive,
-// it controls the page size up to limit. Otherwise the helper uses the smaller
-// of limit and the DataTables default page size.
-func (c *Client) GetTradesLimit(ctx context.Context, req TradesRequest, limit int) ([]Trade, error) {
-	if limit <= 0 {
-		return nil, fmt.Errorf("volumeleaders trades limit must be positive: %d", limit)
-	}
-
-	pageLength := req.DataTables.Length
-	if pageLength <= 0 || pageLength > limit {
-		pageLength = min(limit, defaultDataTablesLength)
-	}
-
-	trades := make([]Trade, 0, min(limit, pageLength))
-	start := req.DataTables.Start
-	draw := req.DataTables.Draw
-	if draw <= 0 {
-		draw = 1
-	}
-	for len(trades) < limit {
-		remaining := limit - len(trades)
-		length := min(pageLength, remaining)
-		pageReq := req
-		pageReq.DataTables.Start = start
-		pageReq.DataTables.Length = length
-		pageReq.DataTables.Draw = draw
-
-		resp, err := c.GetTrades(ctx, pageReq)
-		if err != nil {
-			return nil, err
-		}
-		if len(resp.Data) == 0 {
-			break
-		}
-
-		items := resp.Data
-		if len(items) > remaining {
-			items = items[:remaining]
-		}
-		trades = append(trades, items...)
-		start += len(resp.Data)
-		draw++
-
-		if len(resp.Data) < length || (resp.RecordsFiltered > 0 && start >= resp.RecordsFiltered) {
-			break
-		}
-	}
-	return trades, nil
+// A positive limit caps the total number of returned records. When limit is
+// zero or negative, all available records are fetched. When
+// req.DataTables.Length is positive it controls the page size (up to limit);
+// otherwise the helper uses the smaller of limit and the DataTables default
+// page size.
+func (c *Client) GetTradesLimit(
+	ctx context.Context,
+	req TradesRequest,
+	limit int,
+) ([]Trade, error) {
+	return fetchLimit(
+		ctx,
+		limit,
+		req.DataTables,
+		func(ctx context.Context, dt DataTablesRequest) (*DataTablesResponse[Trade], error) {
+			req.DataTables = dt
+			return c.GetTrades(ctx, req)
+		},
+	)
 }
 
 // ListTradesLimit fetches up to limit trades using the high-level TradeQuery
-// filter surface.
-func (c *Client) ListTradesLimit(ctx context.Context, query TradeQuery, limit int) ([]Trade, error) {
-	if limit <= 0 {
-		return nil, fmt.Errorf("%w: limit must be positive: %d", ErrInvalidQuery, limit)
-	}
+// filter surface. A zero or negative limit fetches all available records.
+func (c *Client) ListTradesLimit(
+	ctx context.Context,
+	query TradeQuery,
+	limit int,
+) ([]Trade, error) {
 	req, err := query.tradesRequest()
 	if err != nil {
 		return nil, err
@@ -211,26 +185,59 @@ func TradesColumns() []DataTablesColumn {
 		{Data: tradeColumnTime, Name: tradeColumnTime, Searchable: true, Orderable: true},
 		{Data: columnTicker, Name: columnTicker, Searchable: true, Orderable: true},
 		{Data: columnCurrent, Name: columnCurrent, Searchable: true, Orderable: false},
-		{Data: columnTradeShortName, Name: columnTradeShortName, Searchable: true, Orderable: false},
+		{
+			Data:       columnTradeShortName,
+			Name:       columnTradeShortName,
+			Searchable: true,
+			Orderable:  false,
+		},
 		{Data: columnSector, Name: columnSector, Searchable: true, Orderable: true},
 		{Data: columnIndustry, Name: columnIndustry, Searchable: true, Orderable: true},
 		{Data: tradeColumnVolume, Name: columnShName, Searchable: true, Orderable: true},
 		{Data: columnDollars, Name: columnDollarsName, Searchable: true, Orderable: true},
-		{Data: columnDollarsMultiplier, Name: columnRelativeSizeName, Searchable: true, Orderable: true},
-		{Data: columnCumulativeDistribution, Name: columnPercentName, Searchable: true, Orderable: true},
+		{
+			Data:       columnDollarsMultiplier,
+			Name:       columnRelativeSizeName,
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       columnCumulativeDistribution,
+			Name:       columnPercentName,
+			Searchable: true,
+			Orderable:  true,
+		},
 		{Data: columnTradeRank, Name: columnRName, Searchable: true, Orderable: true},
 		{Data: columnRelativeSize, Name: columnRelativeSize, Searchable: true, Orderable: true},
-		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: true},
-		{Data: tradeColumnLastTradeDate, Name: tradeColumnLastTradeDate, Searchable: true, Orderable: false},
+		{
+			Data:       tradeColumnLastTradeDate,
+			Name:       tradeColumnLastTradeDate,
+			Searchable: true,
+			Orderable:  true,
+		},
+		{
+			Data:       tradeColumnLastTradeDate,
+			Name:       tradeColumnLastTradeDate,
+			Searchable: true,
+			Orderable:  false,
+		},
 	}
 }
 
 func (q TradeQuery) tradesRequest() (TradesRequest, error) {
 	if q.Start < 0 {
-		return TradesRequest{}, fmt.Errorf("%w: start must be non-negative: %d", ErrInvalidQuery, q.Start)
+		return TradesRequest{}, fmt.Errorf(
+			"%w: start must be non-negative: %d",
+			ErrInvalidQuery,
+			q.Start,
+		)
 	}
 	if q.Length < 0 {
-		return TradesRequest{}, fmt.Errorf("%w: length must be non-negative: %d", ErrInvalidQuery, q.Length)
+		return TradesRequest{}, fmt.Errorf(
+			"%w: length must be non-negative: %d",
+			ErrInvalidQuery,
+			q.Length,
+		)
 	}
 	if !q.StartDate.IsZero() && !q.EndDate.IsZero() && q.StartDate.After(q.EndDate) {
 		return TradesRequest{}, fmt.Errorf(
@@ -241,10 +248,16 @@ func (q TradeQuery) tradesRequest() (TradesRequest, error) {
 		)
 	}
 	if q.MinVolume < 0 || q.MaxVolume < 0 || q.MaxTradeRank < 0 {
-		return TradesRequest{}, fmt.Errorf("%w: numeric trade filters must be non-negative", ErrInvalidQuery)
+		return TradesRequest{}, fmt.Errorf(
+			"%w: numeric trade filters must be non-negative",
+			ErrInvalidQuery,
+		)
 	}
 	if hasNegativeFloat(q.MinPrice, q.MaxPrice, q.MinDollars, q.MaxDollars, q.MinRelativeSize) {
-		return TradesRequest{}, fmt.Errorf("%w: decimal trade filters must be non-negative", ErrInvalidQuery)
+		return TradesRequest{}, fmt.Errorf(
+			"%w: decimal trade filters must be non-negative",
+			ErrInvalidQuery,
+		)
 	}
 	if q.MinVolume > 0 && q.MaxVolume > 0 && q.MinVolume > q.MaxVolume {
 		return TradesRequest{}, fmt.Errorf(
